@@ -3,6 +3,7 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { Share2, MapPin, Calendar } from "lucide-react";
 import { apiUrl } from "../contant";
+import temp from "../assets/images/playverse.jpg";
 
 import eventImage from "../assets/images/eventImage.png";
 
@@ -10,6 +11,7 @@ const EventList = () => {
   const [events, setEvents] = useState([]);
   const [availableSports, setAvailableSports] = useState([]);
   const [selectedSport, setSelectedSport] = useState("all");
+  const [selectedDateFilter, setSelectedDateFilter] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
@@ -23,17 +25,9 @@ const EventList = () => {
     try {
       const response = await axios.get(`${apiUrl}/events?sport=${sport}`);
       const { events: data, availableSports } = response.data;
-      // console.log(events);
 
-      // Sort events by how close they are to the current date (latest date first)
-      const sortedEvents = data.sort((a, b) => {
-        const currentDate = new Date();
-        const diffA = Math.abs(new Date(a.date) - currentDate);
-        const diffB = Math.abs(new Date(b.date) - currentDate);
-        return diffA - diffB;
-      });
+      const sortedEvents = sortEventsByDateAndTime(data);
 
-      // console.log(events);
       setEvents(sortedEvents);
       setAvailableSports(["all", ...availableSports]);
       setIsLoading(false);
@@ -41,6 +35,93 @@ const EventList = () => {
       console.error("Error fetching events:", error);
       setError(error.message);
       setIsLoading(false);
+    }
+  };
+
+  const sortEventsByDateAndTime = (events) => {
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0);
+
+    // Separate events into today, upcoming, and past
+    const todayEvents = [];
+    const upcomingEvents = [];
+    const pastEvents = [];
+
+    events.forEach((event) => {
+      const eventDateTime = new Date(event.date);
+      const eventDate = new Date(
+        eventDateTime.getFullYear(),
+        eventDateTime.getMonth(),
+        eventDateTime.getDate()
+      );
+
+      if (eventDate.getTime() === currentDate.getTime()) {
+        todayEvents.push(event);
+      } else if (eventDate > currentDate) {
+        upcomingEvents.push(event);
+      } else {
+        pastEvents.push(event);
+      }
+    });
+
+    // Sort today's events by time
+    todayEvents.sort((a, b) => {
+      const timeA = new Date(a.date).getTime();
+      const timeB = new Date(b.date).getTime();
+      return timeA - timeB;
+    });
+
+    // Sort upcoming events by date and time
+    upcomingEvents.sort((a, b) => {
+      const dateTimeA = new Date(a.date).getTime();
+      const dateTimeB = new Date(b.date).getTime();
+      return dateTimeA - dateTimeB;
+    });
+
+    // Sort past events by date (most recent first)
+    pastEvents.sort((a, b) => {
+      const dateTimeA = new Date(a.date).getTime();
+      const dateTimeB = new Date(b.date).getTime();
+      return dateTimeB - dateTimeA;
+    });
+
+    // Combine all sorted events
+    return [...todayEvents, ...upcomingEvents, ...pastEvents];
+  };
+
+  const filterEventsByDate = (events) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const nextWeek = new Date(today);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+
+    switch (selectedDateFilter) {
+      case "today":
+        return events.filter((event) => {
+          const eventDate = new Date(event.date);
+          return eventDate.toDateString() === today.toDateString();
+        });
+      case "tomorrow":
+        return events.filter((event) => {
+          const eventDate = new Date(event.date);
+          return eventDate.toDateString() === tomorrow.toDateString();
+        });
+      case "next7days":
+        return events.filter((event) => {
+          const eventDate = new Date(event.date);
+          return eventDate >= today && eventDate <= nextWeek;
+        });
+      case "past":
+        return events.filter((event) => {
+          const eventDate = new Date(event.date);
+          return eventDate < today;
+        });
+      default:
+        return events;
     }
   };
 
@@ -64,20 +145,20 @@ const EventList = () => {
     );
   }
 
+  const filteredEvents = filterEventsByDate(events);
+
   return (
     <div className="container mx-auto mt-20 p-6">
       <div className="bg-white rounded-lg shadow-md w-full md:w-4/5 lg:w-3/5 mx-auto">
         <img
           src={eventImage}
           alt="Image"
-          class="w-full h-50 object-cover rounded-t-lg"
+          className="w-full h-50 object-cover rounded-t-lg"
         />
       </div>
 
-      {/* <h2 className="text-3xl font-semibold mb-6 text-center">Events</h2> */}
-
-      {/* Filter Bar */}
-      <div className="mt-8 mb-8 overflow-x-auto whitespace-nowrap flex space-x-4 p-2 bg-gray-100 rounded-lg">
+      {/* Filter Bars */}
+      <div className="mt-8 mb-4 overflow-x-auto whitespace-nowrap flex space-x-4 p-2 bg-gray-100 rounded-lg">
         {availableSports.map((sport) => (
           <button
             key={sport}
@@ -93,16 +174,39 @@ const EventList = () => {
         ))}
       </div>
 
+      {/* Date Filter Bar */}
+      <div className="mb-8 overflow-x-auto whitespace-nowrap flex space-x-4 p-2 bg-gray-100 rounded-lg">
+        {[
+          { id: "all", label: "All" },
+          { id: "today", label: "Today" },
+          { id: "tomorrow", label: "Tomorrow" },
+          { id: "next7days", label: "Next 7 Days" },
+          { id: "past", label: "Past Events" },
+        ].map((filter) => (
+          <button
+            key={filter.id}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+              selectedDateFilter === filter.id
+                ? "bg-teal-600 text-white"
+                : "bg-gray-200 text-gray-800"
+            }`}
+            onClick={() => setSelectedDateFilter(filter.id)}
+          >
+            {filter.label}
+          </button>
+        ))}
+      </div>
+
       {/* Events Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {events.map((event) => (
+        {filteredEvents.map((event) => (
           <div
             key={event._id}
             className="max-w-sm w-full mx-auto bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300"
           >
             <div className="relative">
               <img
-                src={event.venueImage || "/api/placeholder/400/320"}
+                src={event.venueImage || temp}
                 alt={event.name}
                 className="w-full h-48 object-cover"
               />

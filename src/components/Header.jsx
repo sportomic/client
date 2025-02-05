@@ -1,23 +1,33 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom"; // Only import from react-router-dom
+import logo from "../assets/images/logo.svg";
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
 
   const handleNavigation = () => {
-    console.log("Navigating to Home Page...");
+    // console.log("Navigating to Events Page...");
+    setIsOpen(false); // Close menu when logo is clicked
     navigate("/");
   };
 
+  const handleLinkClick = () => {
+    setIsOpen(false); // Close menu when any link is clicked
+  };
+
   return (
-    <header className="fixed top-0 w-full bg-white/10 backdrop-blur-lg shadow-lg z-50">
+    <header className="fixed top-0 w-full bg-white shadow-lg z-50">
       <div className="container mx-auto px-6 h-20 flex items-center justify-between">
         {/* Logo Section */}
         <div className="flex items-center">
           <h1 className="font-bebas text-4xl">
-            <button onClick={() => handleNavigation()}>
-              <span className="font text-[#202d37]">SPORTOMIC </span>
+            <button onClick={handleNavigation} className="flex items-center">
+              <img src={logo} alt="Logo" className="w-10 h-10 mr-2" />
+              <span className="text-[#008080] font-bebas text-5xl pt-1.5">
+                SPORTMIC
+              </span>
+              <span className="text-transparent [-webkit-text-stroke:1px_#27262a]"></span>
             </button>
           </h1>
         </div>
@@ -51,7 +61,8 @@ const Header = () => {
         >
           <li className="md:inline-block">
             <Link
-              to="/events"
+              to="/"
+              onClick={handleLinkClick}
               className="block text-center font-Outfit text-2xl text-[#27262a] font-semibold py-2 px-4 hover:text-blue-500"
             >
               Event
@@ -60,6 +71,7 @@ const Header = () => {
           <li className="md:inline-block">
             <Link
               to="/about"
+              onClick={handleLinkClick}
               className="block text-center font-Outfit text-2xl text-[#27262a] font-semibold py-2 px-4 hover:text-blue-500"
             >
               About Us
@@ -68,6 +80,7 @@ const Header = () => {
           <li className="md:inline-block">
             <Link
               to="/contact"
+              onClick={handleLinkClick}
               className="block text-center font-Outfit text-2xl text-[#27262a] font-semibold py-2 px-4 hover:text-blue-500"
             >
               Contact Us

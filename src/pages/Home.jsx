@@ -19,6 +19,7 @@ const Home = () => {
       {/* <PhotoGrid /> */}
       {/* <Testimonial21 /> */}
       <HeroSection />
+
       <EventHighlightsSection />
 
       {/* <PlayerCount /> */}

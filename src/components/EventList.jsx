@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { Share2, MapPin, Calendar } from "lucide-react";
 import { apiUrl } from "../contant";
 
+import eventImage from "../assets/images/eventImage.png";
+
 const EventList = () => {
   const [events, setEvents] = useState([]);
   const [availableSports, setAvailableSports] = useState([]);
@@ -21,6 +23,7 @@ const EventList = () => {
     try {
       const response = await axios.get(`${apiUrl}/events?sport=${sport}`);
       const { events: data, availableSports } = response.data;
+      // console.log(events);
 
       // Sort events by how close they are to the current date (latest date first)
       const sortedEvents = data.sort((a, b) => {
@@ -30,7 +33,7 @@ const EventList = () => {
         return diffA - diffB;
       });
 
-      console.log(events);
+      // console.log(events);
       setEvents(sortedEvents);
       setAvailableSports(["all", ...availableSports]);
       setIsLoading(false);
@@ -63,10 +66,18 @@ const EventList = () => {
 
   return (
     <div className="container mx-auto mt-20 p-6">
-      <h2 className="text-3xl font-semibold mb-6 text-center">Events</h2>
+      <div className="bg-white rounded-lg shadow-md w-full md:w-4/5 lg:w-3/5 mx-auto">
+        <img
+          src={eventImage}
+          alt="Image"
+          class="w-full h-50 object-cover rounded-t-lg"
+        />
+      </div>
+
+      {/* <h2 className="text-3xl font-semibold mb-6 text-center">Events</h2> */}
 
       {/* Filter Bar */}
-      <div className="mb-8 overflow-x-auto whitespace-nowrap flex space-x-4 p-2 bg-gray-100 rounded-lg">
+      <div className="mt-8 mb-8 overflow-x-auto whitespace-nowrap flex space-x-4 p-2 bg-gray-100 rounded-lg">
         {availableSports.map((sport) => (
           <button
             key={sport}
@@ -130,6 +141,7 @@ const EventList = () => {
                   })}
                 </span>
               </div>
+              <div>{event.slot}</div>
               <div className="flex items-center justify-between mt-4">
                 <div className="flex items-baseline">
                   <span className="text-lg font-bold text-gray-900">

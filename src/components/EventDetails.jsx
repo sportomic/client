@@ -199,8 +199,17 @@ const EventDetails = () => {
               {event.name}
             </h1>
 
+            <div className="mb-8">
+              <ul className="space-y-2 text-gray-600">
+                <li className="flex items-start">
+                  <span className="mr-2">•</span>
+                  {event.description}
+                </li>
+              </ul>
+            </div>
+
             {/* Event Info */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-1 mt-4 sm:grid-cols-3 gap-4 mb-6">
               <div className="flex items-center space-x-2">
                 <span className="font-semibold">{event.sportsName}</span>
               </div>
@@ -210,7 +219,7 @@ const EventDetails = () => {
                 </span>
               </div>
               <div className="flex items-center space-x-2">
-                <span className="text-gray-600">{event.slot}</span>
+                <span className="text-black-600 font-bold">{event.slot}</span>
               </div>
             </div>
 

@@ -21,9 +21,9 @@ function App() {
         <Header />
         <main className="min-h-screen">
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route path="/home" element={<Home />} />
             <Route path="/about" element={<About />} />
-            <Route path="/events" element={<Events />} />
+            <Route path="/" element={<Events />} />
             <Route path="/add-event" element={<AddEvent />} />
             <Route path="/event/:eventId" element={<EventDetails />} />
             <Route path="/event/:eventId" element={<EventDetails />} />
@@ -42,4 +42,3 @@ function App() {
 }
 
 export default App;
-

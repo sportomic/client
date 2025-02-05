@@ -72,6 +72,10 @@ const EventDetails = () => {
 
       const order = await response.json();
 
+      if (!import.meta.env.VITE_RAZORPAY_KEY_ID) {
+        console.error("Razorpay Key ID is missing");
+      }
+
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID,
         amount: order.amount,

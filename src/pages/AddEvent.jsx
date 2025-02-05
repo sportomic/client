@@ -30,7 +30,7 @@ const AddEvent = () => {
         progress: undefined,
         theme: "light",
         transition: Bounce,
-        onClose: () => navigate("/events"),
+        onClose: () => navigate("/"),
       });
     } catch (error) {
       console.error("Error creating event:", error);

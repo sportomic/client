@@ -26,7 +26,7 @@ const Footer = () => {
               <button onClick={handleNavigation} className="flex items-center">
                 <img src={logo} alt="Logo" className="w-10 h-10 mr-2" />
                 <span className="text-[#008080] font-bebas text-5xl pt-1.5">
-                  SPORTMIC
+                  SPORTOMIC
                 </span>
                 <span className="text-transparent [-webkit-text-stroke:1px_#27262a]"></span>
               </button>

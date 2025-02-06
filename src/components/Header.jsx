@@ -25,7 +25,7 @@ const Header = () => {
             <button onClick={handleNavigation} className="flex items-center">
               <img src={logo} alt="Logo" className="w-10 h-10 mr-2" />
               <span className="text-[#008080] font-bebas text-5xl pt-1.5">
-                SPORTMIC
+                SPORTOMIC
               </span>
               <span className="text-transparent [-webkit-text-stroke:1px_#27262a]"></span>
             </button>
@@ -90,7 +90,9 @@ const Header = () => {
 
         {/* Button */}
         <button className="hidden md:block bg-[#263238] text-white rounded-full px-6 h-12">
-          GET OUR APP
+          <a href="https://sportomic.com/" target="_blank">
+            GET OUR APP
+          </a>
         </button>
       </div>
     </header>

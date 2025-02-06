@@ -188,7 +188,7 @@ const AddEvent = () => {
         {/* Slot Selection */}
         <div>
           <label htmlFor="slot" className="block text-sm font-medium">
-            Event Slot (2-Hour Intervals)
+            Event Slot (1-Hour Intervals)
           </label>
           <Controller
             name="slot"

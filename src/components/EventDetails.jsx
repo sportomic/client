@@ -8,12 +8,12 @@ const EventDetails = () => {
   const [participants, setParticipants] = useState([]);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [skillLevel, setSkillLevel] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [paymentDetails, setPaymentDetails] = useState(null);
 
-  // Fetch event details
   useEffect(() => {
     const fetchEventDetails = async () => {
       try {
@@ -33,7 +33,6 @@ const EventDetails = () => {
     }
   }, [eventId]);
 
-  // Fetch participants data
   const fetchParticipants = async () => {
     try {
       const response = await fetch(
@@ -43,7 +42,6 @@ const EventDetails = () => {
       const data = await response.json();
 
       setParticipants(data.successfulPayments);
-      // console.log(data);
     } catch (error) {
       setError(error.message);
     }
@@ -56,13 +54,28 @@ const EventDetails = () => {
   }, [eventId]);
 
   const handlePayment = async () => {
+    if (!/^\d{10}$/.test(phone)) {
+      alert("Please enter a valid 10-digit phone number");
+      return;
+    }
+
+    if (!phone || !name) {
+      alert("Please enter phone and name");
+      return;
+    }
+
+    if (!skillLevel) {
+      alert("Please select your skill level");
+      return;
+    }
+
     try {
       const response = await fetch(`${apiUrl}/events/${eventId}/book`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ name, phone }),
+        body: JSON.stringify({ name, phone, skillLevel }),
       });
 
       if (!response.ok) {
@@ -71,10 +84,6 @@ const EventDetails = () => {
       }
 
       const order = await response.json();
-
-      if (!import.meta.env.VITE_RAZORPAY_KEY_ID) {
-        console.error("Razorpay Key ID is missing");
-      }
 
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID,
@@ -87,14 +96,12 @@ const EventDetails = () => {
           name: name,
           contact: phone,
         },
-
         method: {
-          upi: 1, // Enable UPI payments
+          upi: 1,
           netbanking: 1,
           card: 1,
           wallet: 1,
         },
-
         config: {
           display: {
             blocks: {
@@ -109,7 +116,6 @@ const EventDetails = () => {
             },
           },
         },
-
         handler: async (response) => {
           try {
             const confirmResponse = await fetch(
@@ -125,6 +131,7 @@ const EventDetails = () => {
                   razorpaySignature: response.razorpay_signature,
                   participantName: name,
                   participantPhone: phone,
+                  skillLevel: skillLevel,
                 }),
               }
             );
@@ -134,10 +141,10 @@ const EventDetails = () => {
               throw new Error(errorData.error || "Payment confirmation failed");
             }
 
-            // Handle successful payment
             setPaymentDetails({
               participantName: name,
               participantPhone: phone,
+              skillLevel: skillLevel,
               paymentId: response.razorpay_payment_id,
             });
             setShowSuccessModal(true);
@@ -244,7 +251,7 @@ const EventDetails = () => {
               </ul>
             </div>
 
-            {/* Payment Form */}
+            {/* Payment Form - Updated with skill level */}
             <div className="bg-gray-50 rounded-lg p-4 md:p-6 mb-6">
               <h2 className="text-lg font-semibold mb-4">Payment Details</h2>
               <div className="space-y-4">
@@ -271,6 +278,24 @@ const EventDetails = () => {
                     className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                     required
                   />
+                </div>
+                {/* New Skill Level Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Skill Level
+                  </label>
+                  <select
+                    value={skillLevel}
+                    onChange={(e) => setSkillLevel(e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                    required
+                  >
+                    <option value="">Select your skill level</option>
+                    <option value="beginner">Beginner</option>
+                    <option value="intermediate/advanced">
+                      Intermediate/Advanced
+                    </option>
+                  </select>
                 </div>
               </div>
             </div>
@@ -300,7 +325,7 @@ const EventDetails = () => {
           </div>
         </div>
 
-        {/* Participants Table */}
+        {/* Participants Table - Updated to show skill level */}
         {participants.length > 0 && (
           <div className="mt-8 bg-white rounded-xl shadow-md overflow-hidden">
             <div className="p-4 sm:p-6 md:p-8">
@@ -311,6 +336,9 @@ const EventDetails = () => {
                     <tr className="bg-gray-100">
                       <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">
                         Name
+                      </th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">
+                        Skill Level
                       </th>
                     </tr>
                   </thead>
@@ -326,13 +354,18 @@ const EventDetails = () => {
                             className="h-5 w-5 mr-2 text-teal-500"
                           >
                             <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
                               d="M12 2a4 4 0 110 8 4 4 0 010-8zm0 14c-3.313 0-6 2.687-6 6h12c0-3.313-2.687-6-6-6z"
                             />
                           </svg>
                           <span>{participant.name}</span>
+                        </td>
+                        <td className="px-4 py-3 text-lg text-gray-900">
+                          <span className="capitalize">
+                            {participant.skillLevel}
+                          </span>
                         </td>
                       </tr>
                     ))}

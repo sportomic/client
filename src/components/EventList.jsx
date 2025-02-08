@@ -131,7 +131,7 @@ const EventList = () => {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6 text-center">
+      <div className="container mt-40 mx-auto p-6 text-center">
         <p className="text-lg">Loading events...</p>
       </div>
     );

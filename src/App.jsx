@@ -12,6 +12,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/SignUpPage";
 import AdminPage from "./pages/AdminPage";
 import ContactUs from "./pages/ContactUs";
+import DownloadExcel from "./components/DownloadExcel";
 // import cookies from "js-cookie";
 
 function App() {
@@ -31,6 +32,7 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/contact" element={<ContactUs />} />
+            <Route path="/download" element={<DownloadExcel />} />
 
             {/* <Route path="*" element={<h1>Not Found</h1>} /> */}
           </Routes>

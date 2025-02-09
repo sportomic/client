@@ -1,6 +1,12 @@
 import React from "react";
 import { useForm, Controller } from "react-hook-form";
-import { Button, Input, Select, Option } from "@material-tailwind/react";
+import {
+  Button,
+  Input,
+  Select,
+  Option,
+  Textarea,
+} from "@material-tailwind/react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer, Bounce } from "react-toastify";
@@ -72,14 +78,60 @@ const AddEvent = () => {
         </div>
         <div>
           <label htmlFor="sportsName" className="block text-sm font-medium">
-            Sports Name
+            Select Sport
           </label>
-          <Input
-            id="sportsName"
-            type="text"
-            placeholder="Enter Sports Name"
-            {...register("sportsName", { required: "Sports name is required" })}
-            className="w-full mt-2"
+          <Controller
+            name="sportsName"
+            control={control}
+            rules={{ required: "Sports selection is required" }}
+            render={({ field }) => (
+              <Select {...field} className="w-full mt-2">
+                {[
+                  "Cricket",
+                  "Pickle Ball",
+                  "Badminton",
+                  "Foot Ball",
+                  "Tennis",
+                  "Paint Ball",
+                  "Shooting",
+                  "Pool Table",
+                  "Snooker",
+                  "Table Tennis",
+                  "Archery",
+                  "Volley Ball",
+                  "Basket Ball",
+                  "Yoga",
+                  "Zumba",
+                  "Taekwondo",
+                  "Gym",
+                  "Boxing",
+                  "Throw Ball",
+                  "Squash",
+                  "Skating",
+                  "Running",
+                  "Rugby",
+                  "Swimming",
+                  "Kabaddi",
+                  "Hiking",
+                  "Golf",
+                  "Gokarting",
+                  "Frisbee",
+                  "FoosBall",
+                  "Cycling",
+                  "Chess",
+                  "Carrom",
+                  "Bowling",
+                  "BaseBall",
+                  "Horse Riding",
+                  "Hockey",
+                  "Marathon",
+                ].map((sport, index) => (
+                  <Option key={index} value={sport}>
+                    {sport}
+                  </Option>
+                ))}
+              </Select>
+            )}
           />
           {errors.sportsName && (
             <p className="text-red-500 text-xs mt-1">
@@ -91,11 +143,10 @@ const AddEvent = () => {
         {/* Description */}
         <div>
           <label htmlFor="description" className="block text-sm font-medium">
-            Description
+            General Instructions
           </label>
-          <Input
+          <Textarea
             id="description"
-            type="text"
             placeholder="Enter Event Description"
             {...register("description", {
               required: "Event description is required",

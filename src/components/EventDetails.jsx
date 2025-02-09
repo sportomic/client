@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import PaymentSuccessModal from "./PaymentSuccessModal";
 import { apiUrl } from "../contant";
-
+import { Calendar, MapPin, Users, Clock, Info, Trophy } from "lucide-react";
 const EventDetails = () => {
   const eventId = window.location.pathname.split("/").pop();
   const [event, setEvent] = useState(null);
@@ -20,6 +20,7 @@ const EventDetails = () => {
         const response = await fetch(`${apiUrl}/events/${eventId}`);
         if (!response.ok) throw new Error("Failed to fetch event details");
         const data = await response.json();
+        console.log(data);
         setEvent(data);
       } catch (error) {
         setError(error.message);
@@ -187,6 +188,13 @@ const EventDetails = () => {
     );
   }
 
+  const capitalizeText = (text) => {
+    return text
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
+  };
+
   if (!event) return null;
 
   return (
@@ -194,60 +202,89 @@ const EventDetails = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
         {/* Single Image */}
         {event.venueImage && (
-          <div className="mb-6 md:mb-8 rounded-lg overflow-hidden shadow-lg">
-            <img
-              src={event.venueImage}
-              alt="Venue"
-              className="w-full h-48 sm:h-64 md:h-96 object-cover"
-            />
+          <div className="mb-8 rounded-2xl overflow-hidden shadow-xl">
+            <div className="relative">
+              <img
+                src={event.venueImage}
+                alt="Venue"
+                className="w-full h-64 md:h-96 object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+            </div>
           </div>
         )}
 
         {/* Event Details Card */}
-        <div className="bg-white rounded-xl shadow-md overflow-hidden">
-          <div className="p-4 sm:p-6 md:p-8">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-4">
-              {event.name}
-            </h1>
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          <div className="p-6 md:p-8">
+            {/* Header */}
+            <div className="flex justify-between items-center mb-8">
+              {/* Venue and Map Pin together */}
+              <div className="flex items-center space-x-2">
+                <MapPin className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 lg:h-8 lg:w-8 text-blue-600" />
 
-            <div className="mb-8">
-              <ul className="space-y-2 text-gray-600">
-                <li className="flex items-start">
-                  <span className="mr-2">•</span>
-                  {event.description}
-                </li>
-              </ul>
-            </div>
+                <h1 className="text-lg sm:text-xl md:text-3xl lg:text-4xl font-bold text-gray-900">
+                  {event.venueName}
+                </h1>
+              </div>
 
-            {/* Event Info */}
-            <div className="grid grid-cols-1 mt-4 sm:grid-cols-3 gap-4 mb-6">
-              <div className="flex items-center space-x-2">
-                <span className="font-semibold">{event.sportsName}</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <span className="font-semibold">
-                  {new Date(event.date).toLocaleDateString("en-GB")}
-                </span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <span className="text-black-600 font-bold">{event.slot}</span>
+              {/* Slots Left */}
+              <div className="px-2 py-1 sm:px-3 sm:py-1.5 md:px-4 md:py-2 bg-blue-100 text-blue-800 rounded-full font-semibold text-sm sm:text-base md:text-lg">
+                {event.participantsLimit - event.currentParticipants} slots left
               </div>
             </div>
 
+            {/* Event Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="flex items-center space-x-3">
+                <div className="p-3 bg-purple-100 rounded-lg">
+                  <Trophy className="h-6 w-6 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Sport</p>
+                  <p className="font-semibold text-gray-900">
+                    {capitalizeText(event.sportsName)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-3">
+                <div className="p-3 bg-green-100 rounded-lg">
+                  <Calendar className="h-6 w-6 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Date</p>
+                  <p className="font-semibold text-gray-900">
+                    {new Date(event.date).toLocaleDateString("en-GB")}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-3">
+                <div className="p-3 bg-orange-100 rounded-lg">
+                  <Clock className="h-6 w-6 text-orange-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">Slot</p>
+                  <p className="font-semibold text-gray-900">{event.slot}</p>
+                </div>
+              </div>
+            </div>
             {/* Instructions */}
-            <div className="mb-8">
-              <h2 className="text-lg font-semibold mb-3">
-                Important Instructions
-              </h2>
-              <ul className="space-y-2 text-gray-600">
-                <li className="flex items-start">
-                  <span className="mr-2">•</span>
-                  Have everything clean & mandatory normal shoes are not allowed
-                </li>
-                <li className="flex items-start">
-                  <span className="mr-2">•</span>
-                  Maintain decorum as per your sportmanship
-                </li>
+            <div className="bg-gray-50 rounded-xl p-6">
+              <div className="flex items-center space-x-2 mb-4">
+                <Info className="h-5 w-5 text-gray-600" />
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Important Instructions
+                </h2>
+              </div>
+              <ul className="space-y-3">
+                {event.description.split("\n").map((instruction, index) => (
+                  <li key={index} className="flex items-start text-gray-700">
+                    <span className="ml-2 mr-3 text-black-500">•</span>
+                    <span>{instruction.trim()}</span>
+                  </li>
+                ))}
               </ul>
             </div>
 
@@ -325,19 +362,21 @@ const EventDetails = () => {
           </div>
         </div>
 
-        {/* Participants Table - Updated to show skill level */}
+        {/* Participants Table - Updated for Responsiveness */}
         {participants.length > 0 && (
           <div className="mt-8 bg-white rounded-xl shadow-md overflow-hidden">
             <div className="p-4 sm:p-6 md:p-8">
-              <h2 className="text-xl font-semibold mb-4">Participants</h2>
+              <h2 className="text-lg sm:text-xl font-semibold mb-4">
+                Participants
+              </h2>
               <div className="overflow-x-auto">
                 <table className="w-full table-auto">
                   <thead>
                     <tr className="bg-gray-100">
-                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">
+                      <th className="px-3 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-medium text-gray-600">
                         Name
                       </th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-600">
+                      <th className="px-3 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-medium text-gray-600">
                         Skill Level
                       </th>
                     </tr>
@@ -345,13 +384,13 @@ const EventDetails = () => {
                   <tbody className="divide-y divide-gray-200">
                     {participants.map((participant, index) => (
                       <tr key={index} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 text-lg text-gray-900 flex items-center">
+                        <td className="px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-900 flex items-center">
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
                             viewBox="0 0 24 24"
                             fill="none"
                             stroke="currentColor"
-                            className="h-5 w-5 mr-2 text-teal-500"
+                            className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2 text-teal-500"
                           >
                             <path
                               strokeLinecap="round"
@@ -360,12 +399,12 @@ const EventDetails = () => {
                               d="M12 2a4 4 0 110 8 4 4 0 010-8zm0 14c-3.313 0-6 2.687-6 6h12c0-3.313-2.687-6-6-6z"
                             />
                           </svg>
-                          <span>{participant.name}</span>
-                        </td>
-                        <td className="px-4 py-3 text-lg text-gray-900">
-                          <span className="capitalize">
-                            {participant.skillLevel}
+                          <span className="truncate max-w-[120px] sm:max-w-none">
+                            {participant.name}
                           </span>
+                        </td>
+                        <td className="px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-900 capitalize">
+                          {participant.skillLevel}
                         </td>
                       </tr>
                     ))}

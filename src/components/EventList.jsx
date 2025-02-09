@@ -4,8 +4,41 @@ import { useNavigate } from "react-router-dom";
 import { Share2, MapPin, Calendar } from "lucide-react";
 import { apiUrl } from "../contant";
 import temp from "../assets/images/playverse.jpg";
-
 import eventImage from "../assets/images/eventImage.png";
+
+const EventSkeleton = () => {
+  return (
+    <div className="max-w-sm w-full mx-auto bg-white rounded-xl overflow-hidden shadow-lg">
+      <div className="animate-pulse">
+        <div className="h-48 bg-gray-200 w-full"></div>
+        <div className="p-5">
+          <div className="h-8 bg-gray-200 rounded w-3/4 mb-4"></div>
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-5 h-5 rounded-full bg-gray-200"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+          </div>
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-5 h-5 rounded-full bg-gray-200"></div>
+            <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+          </div>
+          <div className="flex items-center justify-between mt-6">
+            <div className="h-6 bg-gray-200 rounded w-1/3"></div>
+            <div className="h-10 bg-gray-200 rounded w-1/3"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const FilterSkeleton = () => {
+  return (
+    <div className="animate-pulse">
+      <div className="h-12 bg-gray-200 rounded-lg mb-4"></div>
+      <div className="h-12 bg-gray-200 rounded-lg mb-8"></div>
+    </div>
+  );
+};
 
 const EventList = () => {
   const [events, setEvents] = useState([]);
@@ -15,7 +48,6 @@ const EventList = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-
   useEffect(() => {
     fetchEvents(selectedSport);
   }, [selectedSport]);
@@ -131,8 +163,16 @@ const EventList = () => {
 
   if (isLoading) {
     return (
-      <div className="container mt-40 mx-auto p-6 text-center">
-        <p className="text-lg">Loading events...</p>
+      <div className="container mx-auto mt-20 p-6">
+        <div className="bg-white rounded-lg shadow-md w-full md:w-4/5 lg:w-3/5 mx-auto">
+          <div className="h-50 bg-gray-200 rounded-t-lg animate-pulse"></div>
+        </div>
+        <FilterSkeleton />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((index) => (
+            <EventSkeleton key={index} />
+          ))}
+        </div>
       </div>
     );
   }
@@ -140,7 +180,15 @@ const EventList = () => {
   if (error) {
     return (
       <div className="container mx-auto p-6 text-center">
-        <p className="text-lg text-red-600">Error: {error}</p>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-lg text-red-600">Error: {error}</p>
+          <button
+            onClick={() => fetchEvents(selectedSport)}
+            className="mt-4 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
       </div>
     );
   }

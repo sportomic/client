@@ -13,6 +13,7 @@ import Signup from "./pages/SignUpPage";
 import AdminPage from "./pages/AdminPage";
 import ContactUs from "./pages/ContactUs";
 import DownloadExcel from "./components/DownloadExcel";
+import { Analytics } from "@vercel/analytics/react";
 // import cookies from "js-cookie";
 
 function App() {
@@ -38,6 +39,7 @@ function App() {
           </Routes>
         </main>
         <Footer />
+        <Analytics /> {/* Add this inside the JSX tree */}
       </Router>
     </>
   );

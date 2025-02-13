@@ -44,7 +44,7 @@ const EventList = () => {
   const [events, setEvents] = useState([]);
   const [availableSports, setAvailableSports] = useState([]);
   const [selectedSport, setSelectedSport] = useState("all");
-  const [selectedDateFilter, setSelectedDateFilter] = useState("all");
+  const [selectedDateFilter, setSelectedDateFilter] = useState("today");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
@@ -142,6 +142,20 @@ const EventList = () => {
           const eventDate = new Date(event.date);
           return eventDate.toDateString() === tomorrow.toDateString();
         });
+      case "thisweekend":
+        const saturday = new Date(today);
+        while (saturday.getDay() !== 6) {
+          saturday.setDate(saturday.getDate() + 1);
+        }
+        const sunday = new Date(saturday);
+        sunday.setDate(sunday.getDate() + 1);
+        return events.filter((event) => {
+          const eventDate = new Date(event.date);
+          return (
+            eventDate.toDateString() === saturday.toDateString() ||
+            eventDate.toDateString() === sunday.toDateString()
+          );
+        });
       case "next7days":
         return events.filter((event) => {
           const eventDate = new Date(event.date);
@@ -153,7 +167,10 @@ const EventList = () => {
           return eventDate < today;
         });
       default:
-        return events;
+        return events.filter((event) => {
+          const eventDate = new Date(event.date);
+          return eventDate.toDateString() === today.toDateString();
+        });
     }
   };
 
@@ -205,44 +222,49 @@ const EventList = () => {
         />
       </div>
 
-      {/* Filter Bars */}
-      <div className="mt-8 mb-4 overflow-x-auto whitespace-nowrap flex space-x-4 p-2 bg-gray-100 rounded-lg">
-        {availableSports.map((sport) => (
-          <button
-            key={sport}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-              selectedSport === sport
-                ? "bg-teal-600 text-white"
-                : "bg-gray-200 text-gray-800"
-            }`}
-            onClick={() => setSelectedSport(sport)}
-          >
-            {sport.charAt(0).toUpperCase() + sport.slice(1)}
-          </button>
-        ))}
-      </div>
+      <div
+        className="sticky top-20 z-10 mt-8 mb-4 p-2 bg-gray-100"
+        style={{ backgroundColor: "white" }}
+      >
+        {/* Sports Filter */}
+        <div className="overflow-x-auto whitespace-nowrap flex space-x-4">
+          {availableSports.map((sport) => (
+            <button
+              key={sport}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                selectedSport === sport
+                  ? "bg-teal-600 text-white"
+                  : "bg-gray-200 text-gray-800"
+              }`}
+              onClick={() => setSelectedSport(sport)}
+            >
+              {sport.charAt(0).toUpperCase() + sport.slice(1)}
+            </button>
+          ))}
+        </div>
 
-      {/* Date Filter Bar */}
-      <div className="mb-8 overflow-x-auto whitespace-nowrap flex space-x-4 p-2 bg-gray-100 rounded-lg">
-        {[
-          { id: "all", label: "All" },
-          { id: "today", label: "Today" },
-          { id: "tomorrow", label: "Tomorrow" },
-          { id: "next7days", label: "Next 7 Days" },
-          { id: "past", label: "Past Events" },
-        ].map((filter) => (
-          <button
-            key={filter.id}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-              selectedDateFilter === filter.id
-                ? "bg-teal-600 text-white"
-                : "bg-gray-200 text-gray-800"
-            }`}
-            onClick={() => setSelectedDateFilter(filter.id)}
-          >
-            {filter.label}
-          </button>
-        ))}
+        {/* Date Filter */}
+        <div className="mt-4 overflow-x-auto whitespace-nowrap flex space-x-4">
+          {[
+            { id: "today", label: "Today" },
+            { id: "tomorrow", label: "Tomorrow" },
+            { id: "thisweekend", label: "This Weekend" },
+            { id: "next7days", label: "Next 7 Days" },
+            { id: "past", label: "Past Events" },
+          ].map((filter) => (
+            <button
+              key={filter.id}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                selectedDateFilter === filter.id
+                  ? "bg-teal-600 text-white"
+                  : "bg-gray-200 text-gray-800"
+              }`}
+              onClick={() => setSelectedDateFilter(filter.id)}
+            >
+              {filter.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Events Grid */}

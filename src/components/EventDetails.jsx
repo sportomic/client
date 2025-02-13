@@ -20,7 +20,7 @@ const EventDetails = () => {
         const response = await fetch(`${apiUrl}/events/${eventId}`);
         if (!response.ok) throw new Error("Failed to fetch event details");
         const data = await response.json();
-        console.log(data);
+        // console.log(data);
         setEvent(data);
       } catch (error) {
         setError(error.message);

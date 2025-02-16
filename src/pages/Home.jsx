@@ -1,8 +1,5 @@
 import React from "react";
-import PlayerCount from "../components/PlayerCount";
-import EventImages from "../components/EventImages";
-import PhotoGrid from "../components/PhotoGrid";
-import Testimonial21 from "../components/Testimonial21";
+
 import EventHighlightsSection from "../components/EventHighlightSection";
 import HeroSection from "../components/HeroSection";
 

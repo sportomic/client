@@ -10,10 +10,11 @@ import AddEvent from "./pages/AddEvent";
 import EventDetails from "./components/EventDetails";
 import Login from "./pages/Login";
 import Signup from "./pages/SignUpPage";
-import AdminPage from "./pages/AdminPage";
+// import AdminPage from "./pages/AdminPage";
 import ContactUs from "./pages/ContactUs";
 import DownloadExcel from "./components/DownloadExcel";
 import { Analytics } from "@vercel/analytics/react";
+// import AdminDashboard from "./pages/AdminDashboard";
 // import cookies from "js-cookie";
 
 function App() {
@@ -31,7 +32,7 @@ function App() {
             <Route path="/event/:eventId" element={<EventDetails />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/admin" element={<AdminPage />} />
+            {/* <Route path="/admin" element={<AdminDashboard />} /> */}
             <Route path="/contact" element={<ContactUs />} />
             <Route path="/download" element={<DownloadExcel />} />
 

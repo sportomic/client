@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import {
   Button,
@@ -14,6 +14,42 @@ import "react-toastify/dist/ReactToastify.css";
 import { apiUrl } from "../contant";
 
 const AddEvent = () => {
+  const [file, setFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const handleFileChange = (event) => {
+    setFile(event.target.files[0]);
+  };
+
+  const handleUpload = async () => {
+    if (!file) {
+      setMessage("Please select a file");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    setUploading(true);
+    setMessage("");
+
+    try {
+      const response = await axios.post(`${apiUrl}/events/upload`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      setMessage(response.data.message);
+    } catch (error) {
+      console.error(error);
+      setMessage("Error uploading file");
+    }
+
+    setUploading(false);
+  };
+
   const {
     register,
     handleSubmit,
@@ -336,6 +372,30 @@ const AddEvent = () => {
           Create Event
         </Button>
       </form>
+
+      <div className="mt-10 max-w-lg mx-auto p-6 bg-white shadow-lg rounded-lg">
+        <h2 className="text-xl font-semibold mb-4">Bulk Upload Events</h2>
+
+        <input
+          type="file"
+          accept=".xlsx, .xls"
+          onChange={handleFileChange}
+          className="mb-3 border rounded p-2 w-full"
+        />
+
+        <button
+          onClick={handleUpload}
+          disabled={uploading}
+          className={`px-4 py-2 text-white rounded ${
+            uploading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"
+          }`}
+        >
+          {uploading ? "Uploading..." : "Upload Events"}
+        </button>
+
+        {message && <p className="mt-3 text-sm text-gray-700">{message}</p>}
+      </div>
+
       <ToastContainer />
     </div>
   );

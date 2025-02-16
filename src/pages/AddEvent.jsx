@@ -239,7 +239,7 @@ const AddEvent = () => {
         {/* Slot Selection */}
         <div>
           <label htmlFor="slot" className="block text-sm font-medium">
-            Event Slot (1-Hour Intervals)
+            Event Slot (1-Hour or 2-Hour Intervals)
           </label>
           <Controller
             name="slot"
@@ -266,6 +266,15 @@ const AddEvent = () => {
                   "9:00 PM - 10:00 PM",
                   "10:00 PM - 11:00 PM",
                   "11:00 PM - 12:00 AM",
+                  "6:00 AM - 8:00 AM",
+                  "8:00 AM - 10:00 AM",
+                  "10:00 AM - 12:00 PM",
+                  "12:00 PM - 2:00 PM",
+                  "2:00 PM - 4:00 PM",
+                  "4:00 PM - 6:00 PM",
+                  "6:00 PM - 8:00 PM",
+                  "8:00 PM - 10:00 PM",
+                  "10:00 PM - 12:00 AM",
                 ].map((slot, index) => (
                   <Option key={index} value={slot}>
                     {slot}
@@ -278,7 +287,6 @@ const AddEvent = () => {
             <p className="text-red-500 text-xs mt-1">{errors.slot.message}</p>
           )}
         </div>
-
         {/* Participants Limit */}
         <div>
           <label

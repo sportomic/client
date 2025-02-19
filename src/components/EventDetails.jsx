@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import PaymentSuccessModal from "./PaymentSuccessModal";
 import { apiUrl } from "../contant";
 import { Calendar, MapPin, Users, Clock, Info, Trophy } from "lucide-react";
+
 const EventDetails = () => {
   const eventId = window.location.pathname.split("/").pop();
   const [event, setEvent] = useState(null);
@@ -9,6 +10,7 @@ const EventDetails = () => {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [skillLevel, setSkillLevel] = useState("");
+  const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -20,7 +22,6 @@ const EventDetails = () => {
         const response = await fetch(`${apiUrl}/events/${eventId}`);
         if (!response.ok) throw new Error("Failed to fetch event details");
         const data = await response.json();
-        // console.log(data);
         setEvent(data);
       } catch (error) {
         setError(error.message);
@@ -54,6 +55,8 @@ const EventDetails = () => {
     }
   }, [eventId]);
 
+  const totalAmount = event ? event.price * quantity : 0;
+
   const handlePayment = async () => {
     if (!/^\d{10}$/.test(phone)) {
       alert("Please enter a valid 10-digit phone number");
@@ -76,7 +79,12 @@ const EventDetails = () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ name, phone, skillLevel }),
+        body: JSON.stringify({
+          name,
+          phone,
+          skillLevel,
+          quantity,
+        }),
       });
 
       if (!response.ok) {
@@ -88,7 +96,7 @@ const EventDetails = () => {
 
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-        amount: order.amount,
+        amount: totalAmount,
         currency: "INR",
         name: order.eventName,
         description: "Event Booking",
@@ -133,6 +141,7 @@ const EventDetails = () => {
                   participantName: name,
                   participantPhone: phone,
                   skillLevel: skillLevel,
+                  quantity: quantity,
                 }),
               }
             );
@@ -147,6 +156,7 @@ const EventDetails = () => {
               participantPhone: phone,
               skillLevel: skillLevel,
               paymentId: response.razorpay_payment_id,
+              quantity: quantity,
             });
             setShowSuccessModal(true);
             fetchParticipants();
@@ -288,7 +298,7 @@ const EventDetails = () => {
               </ul>
             </div>
 
-            {/* Payment Form - Updated with skill level */}
+            {/* Payment Form - Updated with skill level and quantity */}
             <div className="bg-gray-50 rounded-lg p-4 md:p-6 mb-6">
               <h2 className="text-lg font-semibold mb-4">Payment Details</h2>
               <div className="space-y-4">
@@ -334,6 +344,48 @@ const EventDetails = () => {
                     </option>
                   </select>
                 </div>
+                {/* Quantity Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mt-5 mb-2">
+                    Select Slots (Max{" "}
+                    {Math.max(
+                      0,
+                      event.participantsLimit - event.currentParticipants
+                    )}{" "}
+                    available)
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                      disabled={quantity === 1}
+                      className="h-10 w-10 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      -
+                    </button>
+                    <span className="h-10 w-16 text-center border border-gray-300 rounded-lg flex items-center justify-center">
+                      {quantity}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setQuantity((q) =>
+                          Math.min(
+                            q + 1,
+                            event.participantsLimit - event.currentParticipants
+                          )
+                        )
+                      }
+                      disabled={
+                        quantity >=
+                        event.participantsLimit - event.currentParticipants
+                      }
+                      className="h-10 w-10 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -342,21 +394,20 @@ const EventDetails = () => {
               <div>
                 <span className="text-sm text-gray-600">TOTAL</span>
                 <div className="text-2xl font-bold text-gray-900">
-                  INR {event.price}
+                  INR {event.price * quantity}
                 </div>
               </div>
               <button
                 onClick={handlePayment}
                 className={`w-full sm:w-auto px-8 py-3 rounded-lg font-medium ${
-                  event.participants.length === event.participantsLimit
+                  event.currentParticipants >= event.participantsLimit
                     ? "bg-gray-400 text-gray-800 cursor-not-allowed"
                     : "bg-teal-600 text-white hover:bg-teal-700"
                 }`}
-                disabled={event.participants.length === event.participantsLimit}
+                disabled={event.currentParticipants >= event.participantsLimit}
               >
-                {event.participants.length === event.participantsLimit
-                  ? "No Slots Left"
-                  : "Book Now"}
+                Book {quantity} Slot{quantity > 1 ? "s" : ""} · ₹
+                {event.price * quantity}
               </button>
             </div>
           </div>
@@ -378,6 +429,9 @@ const EventDetails = () => {
                       </th>
                       <th className="px-3 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-medium text-gray-600">
                         Skill Level
+                      </th>
+                      <th className="px-3 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-medium text-gray-600">
+                        Slots Booked
                       </th>
                     </tr>
                   </thead>
@@ -405,6 +459,9 @@ const EventDetails = () => {
                         </td>
                         <td className="px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-900 capitalize">
                           {participant.skillLevel}
+                        </td>
+                        <td className="px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-900">
+                          {participant.quantity}
                         </td>
                       </tr>
                     ))}

@@ -1,5 +1,4 @@
 import React from "react";
-
 import EventHighlightsSection from "../components/EventHighlightSection";
 import HeroSection from "../components/HeroSection";
 

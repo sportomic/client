@@ -228,7 +228,7 @@ const EventDetails = () => {
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
           <div className="p-6 md:p-8">
             {/* Header */}
-            <div className="flex justify-between items-center mb-8">
+            <div className="flex justify-between items-center ">
               {/* Venue and Map Pin together */}
               <div className="flex items-center space-x-2">
                 <MapPin className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 lg:h-8 lg:w-8 text-blue-600" />
@@ -243,6 +243,10 @@ const EventDetails = () => {
                 {event.participantsLimit - event.currentParticipants} slots left
               </div>
             </div>
+            {/* name of event */}
+            <h2 className="text-sm text-black-500 mb-4">
+              {capitalizeText(event.name)}
+            </h2>
 
             {/* Event Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -266,6 +270,11 @@ const EventDetails = () => {
                   <p className="text-sm text-gray-500">Date</p>
                   <p className="font-semibold text-gray-900">
                     {new Date(event.date).toLocaleDateString("en-GB")}
+                    {/* add day */} (
+                    {new Date(event.date).toLocaleDateString("en-GB", {
+                      weekday: "long",
+                    })}
+                    )
                   </p>
                 </div>
               </div>

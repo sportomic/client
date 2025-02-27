@@ -5,6 +5,13 @@ import { Share2, MapPin, Calendar } from "lucide-react";
 import { apiUrl } from "../contant";
 import temp from "../assets/images/playverse.jpg";
 import eventImage from "../assets/images/eventImage.png";
+import maskgroup5 from "../assets/images/mask-group-5.jpg";
+import maskgroup6 from "../assets/images/mask-group-6.jpg";
+import maskgroup4 from "../assets/images/mask-group-4.jpg";
+import maskgroup3 from "../assets/images/mask-group-3.jpg";
+import womens1 from "../assets/images/womens1.png";
+import womens2 from "../assets/images/womens2.png";
+import Carousel from "./Carousel";
 
 const EventSkeleton = () => {
   return (
@@ -212,14 +219,19 @@ const EventList = () => {
 
   const filteredEvents = filterEventsByDate(events);
 
+  const carouselImages = [
+    womens1,
+    womens2,
+    maskgroup6,
+    maskgroup5,
+    maskgroup4,
+    maskgroup3,
+  ];
+
   return (
     <div className="container mx-auto mt-20 p-6">
-      <div className="bg-white rounded-lg shadow-md w-full md:w-4/5 lg:w-3/5 mx-auto">
-        <img
-          src={eventImage}
-          alt="Image"
-          className="w-full h-50 object-cover rounded-t-lg"
-        />
+      <div className="bg-white rounded-lg shadow-md w-full mx-auto">
+        <Carousel images={carouselImages} />
       </div>
 
       <div

@@ -71,7 +71,17 @@ const Footer = () => {
                 <FaLinkedin size={30} className="text-blue-600" />
               </a>
             </div>
-            <p className="text-gray-600">+917899152424</p>
+            <p className="text-gray-600">
+              For Corporate Queries : +917899152424
+            </p>
+            <a
+              href="https://docs.google.com/your-form-link"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-600 hover:text-gray-800"
+            >
+              Contact Form
+            </a>
             <p className="text-gray-600">help@sportomic.com</p>
           </div>
         </div>
@@ -86,6 +96,12 @@ const Footer = () => {
           </Link>
           <Link to="/about" className="text-gray-600 hover:text-gray-800">
             About Us
+          </Link>
+          <Link to="/privacy" className="text-gray-600 hover:text-gray-800">
+            Privacy Policy
+          </Link>
+          <Link to="/terms" className="text-gray-600 hover:text-gray-800">
+            Terms & Conditions
           </Link>
         </div>
       </div>

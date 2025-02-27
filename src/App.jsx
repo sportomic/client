@@ -21,6 +21,8 @@ import DownloadExcel from "./components/DownloadExcel";
 import { Analytics } from "@vercel/analytics/react";
 import AdminDashboard from "./pages/AdminDashboard";
 import HeaderAdmin from "./components/HeaderAdmin";
+import TermsAndConditions from "./components/TermsAndConditions";
+import PrivacyPolicy from "./components/PrivacyPolicy";
 // import AdminDashboard from "./pages/AdminDashboard";
 // import cookies from "js-cookie";
 
@@ -43,6 +45,8 @@ function App() {
           <Routes>
             <Route path="/home" element={<Home />} />
             <Route path="/about" element={<About />} />
+            <Route path="/terms" element={<TermsAndConditions />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/" element={<Events />} />
             <Route path="/add-event" element={<AddEvent />} />
             <Route path="/event/:eventId" element={<EventDetails />} />

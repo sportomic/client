@@ -1,9 +1,56 @@
-import React from "react";
+import React, { useState } from "react";
+import axios from "axios";
+import { apiUrl } from "../contant";
 
 const EventCard = ({ event, handleDelete, setEditingEvent }) => {
+  const [isLoading, setIsLoading] = useState(false); // Loading state for API calls
   const formattedDate = new Date(event.date)
     .toLocaleDateString("en-GB")
     .replace(/\//g, "-");
+
+  // Handle Confirm button click
+  const handleConfirm = async () => {
+    if (!window.confirm("Send confirmation to all participants?")) return;
+
+    setIsLoading(true);
+    try {
+      const response = await axios.post(
+        `${apiUrl}/events/${event._id}/send-confirmation`
+      );
+      console.log("Confirmation Response:", response.data);
+      alert("Confirmation messages sent successfully!");
+    } catch (error) {
+      console.error(
+        "Error sending confirmation:",
+        error.response ? error.response.data : error.message
+      );
+      alert("Failed to send confirmation messages. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle Cancel button click
+  const handleCancel = async () => {
+    if (!window.confirm("Send cancellation to all participants?")) return;
+
+    setIsLoading(true);
+    try {
+      const response = await axios.post(
+        `${apiUrl}/events/${event._id}/send-cancellation`
+      );
+      console.log("Cancellation Response:", response.data);
+      alert("Cancellation messages sent successfully!");
+    } catch (error) {
+      console.error(
+        "Error sending cancellation:",
+        error.response ? error.response.data : error.message
+      );
+      alert("Failed to send cancellation messages. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="flex items-center justify-between p-4 bg-white rounded-xl shadow-sm border border-gray-100 w-full mx-auto mb-4">
@@ -30,21 +77,47 @@ const EventCard = ({ event, handleDelete, setEditingEvent }) => {
         </div>
 
         <div className="mt-4 sm:mt-0 flex flex-wrap gap-2 sm:justify-end w-full sm:w-1/2">
-          <button className="px-2 sm:px-3 py-1 bg-gray-200 rounded-md text-xs sm:text-sm text-blue-600 hover:bg-blue-50">
-            Confirm
+          <button
+            onClick={handleConfirm}
+            disabled={isLoading}
+            className={`px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm text-blue-600 ${
+              isLoading
+                ? "bg-gray-300 cursor-not-allowed"
+                : "bg-gray-200 hover:bg-blue-50"
+            }`}
+          >
+            {isLoading ? "Sending..." : "Confirm"}
           </button>
           <button
             onClick={() => handleDelete(event._id)}
-            className="px-2 sm:px-3 py-1 bg-gray-200 rounded-md text-xs sm:text-sm text-red-600 hover:bg-red-50"
+            disabled={isLoading}
+            className={`px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm text-red-600 ${
+              isLoading
+                ? "bg-gray-300 cursor-not-allowed"
+                : "bg-gray-200 hover:bg-red-50"
+            }`}
           >
             Delete
           </button>
-          <button className="px-2 sm:px-3 py-1 bg-gray-200 rounded-md text-xs sm:text-sm text-gray-600 hover:bg-gray-300">
-            Cancel
+          <button
+            onClick={handleCancel}
+            disabled={isLoading}
+            className={`px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm text-gray-600 ${
+              isLoading
+                ? "bg-gray-300 cursor-not-allowed"
+                : "bg-gray-200 hover:bg-gray-300"
+            }`}
+          >
+            {isLoading ? "Sending..." : "Cancel"}
           </button>
           <button
             onClick={() => setEditingEvent(event)}
-            className="px-2 sm:px-3 py-1 bg-gray-200 rounded-md text-xs sm:text-sm text-teal-600 font-medium hover:bg-teal-50"
+            disabled={isLoading}
+            className={`px-2 sm:px-3 py-1 rounded-md text-xs sm:text-sm text-teal-600 font-medium ${
+              isLoading
+                ? "bg-gray-300 cursor-not-allowed"
+                : "bg-gray-200 hover:bg-teal-50"
+            }`}
           >
             EDIT
           </button>

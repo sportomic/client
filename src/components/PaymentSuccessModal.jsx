@@ -3,8 +3,8 @@ import { Share, X } from "lucide-react";
 
 const PaymentSuccessModal = ({ isOpen, onClose, paymentDetails, event }) => {
   const shareUrl = window.location.href;
-  console.log(paymentDetails);
-  console.log(event);
+  // console.log(paymentDetails);
+  // console.log(event);
   const handleShare = async () => {
     if (navigator.share) {
       try {

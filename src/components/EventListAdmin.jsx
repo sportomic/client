@@ -102,7 +102,7 @@ const EventListAdmin = () => {
     setLoading(true);
     try {
       const response = await axios.get(`${apiUrl}/events?sport=${sport}`);
-      console.log("API Response:", response.data);
+      // console.log("API Response:", response.data);
 
       const { events, availableSports } = response.data;
 
@@ -131,7 +131,7 @@ const EventListAdmin = () => {
 
     try {
       const response = await axios.delete(`${apiUrl}/events/${eventId}`);
-      console.log("Delete Response:", response.data);
+      // console.log("Delete Response:", response.data);
 
       if (response.status === 200 || response.data.success) {
         setEvents((prevEvents) =>
@@ -154,7 +154,7 @@ const EventListAdmin = () => {
         `${apiUrl}/events/${_id}`,
         eventToSubmit
       );
-      console.log("Edit Response:", response.data);
+      // console.log("Edit Response:", response.data);
 
       if (response.status === 200 || response.data.success) {
         setEvents((prevEvents) =>

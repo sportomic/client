@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { Share2, MapPin, Calendar } from "lucide-react";
 import { apiUrl } from "../contant";
 import temp from "../assets/images/playverse.jpg";
-import eventImage from "../assets/images/eventImage.png";
 import maskgroup5 from "../assets/images/mask-group-5.jpg";
 import maskgroup6 from "../assets/images/mask-group-6.jpg";
 import maskgroup4 from "../assets/images/mask-group-4.jpg";
@@ -45,6 +44,33 @@ const FilterSkeleton = () => {
       <div className="h-12 bg-gray-200 rounded-lg mb-8"></div>
     </div>
   );
+};
+
+const handleShare = async (event) => {
+  const shareUrl = `${window.location.origin}/event/${event._id}`;
+  const shareData = {
+    title: event.name,
+    text: `Check out this event: ${event.name} at ${
+      event.location
+    } on ${new Date(event.date).toLocaleDateString()}`,
+    url: shareUrl,
+  };
+
+  try {
+    if (navigator.share) {
+      // Use Web Share API if available
+      await navigator.share(shareData);
+    } else {
+      // Fallback to copying URL to clipboard
+      await navigator.clipboard.writeText(shareUrl);
+      alert("Event link copied to clipboard!");
+    }
+  } catch (error) {
+    console.error("Error sharing event:", error);
+    // Fallback if both methods fail
+    alert("Event link copied to clipboard!");
+    await navigator.clipboard.writeText(shareUrl);
+  }
 };
 
 const EventList = () => {
@@ -292,6 +318,14 @@ const EventList = () => {
                 alt={event.name}
                 className="w-full h-48 object-cover"
               />
+              {/* Share Button */}
+              <button
+                onClick={() => handleShare(event)}
+                className="absolute top-2 right-2 p-2 bg-white rounded-full shadow-md hover:bg-gray-100 transition-colors"
+                aria-label="Share event"
+              >
+                <Share2 className="w-5 h-5 text-gray-600" />
+              </button>
               <div
                 className={`absolute bottom-4 right-4 px-4 py-1 rounded-full text-sm font-medium ${
                   event.slotsLeft > 0

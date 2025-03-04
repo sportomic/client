@@ -5,6 +5,7 @@ import {
   Route,
   Routes,
   useLocation,
+  Navigate, // Add Navigate for redirection
 } from "react-router-dom";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -13,9 +14,8 @@ import About from "./pages/About";
 import Events from "./pages/Events";
 import AddEvent from "./pages/AddEvent";
 import EventDetails from "./components/EventDetails";
-import Login from "./pages/Login";
+import Login from "./pages/LoginPage";
 import Signup from "./pages/SignUpPage";
-// import AdminPage from "./pages/AdminPage";
 import ContactUs from "./pages/ContactUs";
 import DownloadExcel from "./components/DownloadExcel";
 import { Analytics } from "@vercel/analytics/react";
@@ -23,8 +23,23 @@ import AdminDashboard from "./pages/AdminDashboard";
 import HeaderAdmin from "./components/HeaderAdmin";
 import TermsAndConditions from "./components/TermsAndConditions";
 import PrivacyPolicy from "./components/PrivacyPolicy";
-// import AdminDashboard from "./pages/AdminDashboard";
-// import cookies from "js-cookie";
+import { AdminProvider, useAdmin } from "./contexts/AdminContext.jsx"; // Add useAdmin to imports
+import ProtectedRoute from "./components/ProtectedRoute";
+
+// Component to handle login route redirection
+const PrivateLoginRoute = ({ children }) => {
+  const { isAdmin, loading } = useAdmin();
+
+  if (loading) {
+    return <div>Loading...</div>; // Show loading state while verifying token
+  }
+
+  if (isAdmin) {
+    return <Navigate to="/admin" replace />; // Redirect to /admin if logged in
+  }
+
+  return children; // Render login page if not logged in
+};
 
 const HeaderWrapper = () => {
   const location = useLocation();
@@ -37,33 +52,63 @@ const HeaderWrapper = () => {
 
 function App() {
   return (
-    <>
+    <AdminProvider>
       <Router>
-        {/* <Header /> */}
         <HeaderWrapper />
         <main className="min-h-screen">
           <Routes>
+            {/* Public Routes */}
             <Route path="/home" element={<Home />} />
             <Route path="/about" element={<About />} />
             <Route path="/terms" element={<TermsAndConditions />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/" element={<Events />} />
-            <Route path="/add-event" element={<AddEvent />} />
-            <Route path="/event/:eventId" element={<EventDetails />} />
             <Route path="/event/:eventId" element={<EventDetails />} />
             <Route path="/signup" element={<Signup />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/admin" element={<AdminDashboard />} />
+            <Route
+              path="/login"
+              element={
+                <PrivateLoginRoute>
+                  <Login />
+                </PrivateLoginRoute>
+              }
+            />
             <Route path="/contact" element={<ContactUs />} />
-            <Route path="/download" element={<DownloadExcel />} />
 
-            {/* <Route path="*" element={<h1>Not Found</h1>} /> */}
+            {/* Protected Admin Routes */}
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/add-event"
+              element={
+                <ProtectedRoute>
+                  <AddEvent />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/download"
+              element={
+                <ProtectedRoute>
+                  <DownloadExcel />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Optional: Catch-all route */}
+            <Route path="*" element={<h1>Not Found</h1>} />
           </Routes>
         </main>
         <Footer />
-        <Analytics /> {/* Add this inside the JSX tree */}
+        <Analytics />
       </Router>
-    </>
+    </AdminProvider>
   );
 }
 

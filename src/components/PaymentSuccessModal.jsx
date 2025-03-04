@@ -3,15 +3,16 @@ import { Share, X } from "lucide-react";
 
 const PaymentSuccessModal = ({ isOpen, onClose, paymentDetails, event }) => {
   const shareUrl = window.location.href;
-
+  // console.log(paymentDetails);
+  // console.log(event);
   const handleShare = async () => {
     if (navigator.share) {
       try {
         await navigator.share({
           title: `Booked: ${event.name}`,
-          text: `I've booked a slot for ${event.name} on ${new Date(
-            event.date
-          ).toLocaleDateString()}. Join me!`,
+          text: `I've booked ${paymentDetails.quantity} slot${
+            paymentDetails.quantity > 1 ? "s" : ""
+          } for ${event.name} on ${formatDate(event.date)}. Join me!`,
           url: shareUrl,
         });
       } catch (error) {
@@ -21,6 +22,14 @@ const PaymentSuccessModal = ({ isOpen, onClose, paymentDetails, event }) => {
       navigator.clipboard.writeText(shareUrl);
       alert("Link copied to clipboard!");
     }
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0"); // Months are 0-based
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
   };
 
   if (!isOpen || !paymentDetails || !event) return null;
@@ -69,7 +78,7 @@ const PaymentSuccessModal = ({ isOpen, onClose, paymentDetails, event }) => {
               <div className="space-y-2 text-sm">
                 <p>
                   <span className="font-medium">Date:</span>{" "}
-                  {new Date(event.date).toLocaleDateString()}
+                  {formatDate(event.date)}
                 </p>
                 <p>
                   <span className="font-medium">Time:</span> {event.slot}
@@ -82,19 +91,29 @@ const PaymentSuccessModal = ({ isOpen, onClose, paymentDetails, event }) => {
 
             {/* Booking Details */}
             <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-medium mb-2">Booking Details</h4>
+              <h4 className="text-black font-bold mb-2">Booking Details</h4>
+
               <div className="space-y-2 text-sm">
                 <p>
                   <span className="font-medium">Name:</span>{" "}
                   {paymentDetails.participantName}
                 </p>
                 <p>
-                  <span className="font-medium">Phone:</span>{" "}
+                  <span className="font-medium">Skill Level:</span>{" "}
                   {paymentDetails.participantPhone}
                 </p>
                 <p>
+                  <span className="font-medium">Phone:</span>{" "}
+                  {paymentDetails.skillLevel}
+                </p>
+                <p>
+                  <span className="font-medium">Quantity:</span>{" "}
+                  {paymentDetails.quantity || 1} slot
+                  {paymentDetails.quantity > 1 ? "s" : ""}
+                </p>
+                <p>
                   <span className="font-medium">Amount Paid:</span> INR{" "}
-                  {event.price}.00
+                  {event.price * paymentDetails.quantity}.00
                 </p>
               </div>
             </div>

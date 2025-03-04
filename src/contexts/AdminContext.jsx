@@ -1,5 +1,6 @@
 // src/contexts/AdminContext.js
 import React, { createContext, useState, useContext, useEffect } from "react";
+import { apiUrl } from "../contant";
 
 const AdminContext = createContext(null);
 
@@ -20,7 +21,7 @@ export const AdminProvider = ({ children }) => {
 
   const verifyAdminToken = async (token) => {
     try {
-      const response = await fetch("/api/admin/verify", {
+      const response = await fetch(`${apiUrl}/admin/verify`, {
         headers: {
           "x-admin-token": token,
         },
@@ -44,7 +45,7 @@ export const AdminProvider = ({ children }) => {
 
   const login = async (password) => {
     try {
-      const response = await fetch("/api/admin/login", {
+      const response = await fetch(`${apiUrl}/admin/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -12,11 +12,14 @@ import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer, Bounce } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { apiUrl } from "../contant";
+import { useAdmin } from "../contexts/AdminContext"; // Import useAdmin
 
 const AddEvent = () => {
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
+  const { isAdmin } = useAdmin(); // Get admin status
+  const navigate = useNavigate();
 
   const handleFileChange = (event) => {
     setFile(event.target.files[0]);
@@ -35,9 +38,11 @@ const AddEvent = () => {
     setMessage("");
 
     try {
+      const token = localStorage.getItem("adminToken");
       const response = await axios.post(`${apiUrl}/events/upload`, formData, {
         headers: {
           "Content-Type": "multipart/form-data",
+          "x-admin-token": token, // Add admin token to headers
         },
       });
 
@@ -56,12 +61,15 @@ const AddEvent = () => {
     control,
     formState: { errors },
   } = useForm();
-  const navigate = useNavigate();
 
-  // Submit handler for form data
   const onSubmit = async (data) => {
     try {
-      await axios.post(`${apiUrl}/events/add-event`, data);
+      const token = localStorage.getItem("adminToken");
+      await axios.post(`${apiUrl}/events/add-event`, data, {
+        headers: {
+          "x-admin-token": token, // Add admin token to headers
+        },
+      });
       toast.success("🎉 Event created successfully!", {
         position: "top-center",
         autoClose: 3000,
@@ -89,7 +97,6 @@ const AddEvent = () => {
       });
     }
   };
-
   return (
     <div className="max-w-3xl mx-auto mt-20 my-8 p-6 bg-white shadow-lg rounded-xl">
       <h2 className="text-3xl font-semibold text-center mb-6">
@@ -311,6 +318,14 @@ const AddEvent = () => {
                   "6:00 PM - 8:00 PM",
                   "8:00 PM - 10:00 PM",
                   "10:00 PM - 12:00 AM",
+                  "7:00 AM - 9:00 AM",
+                  "9:00 AM - 11:00 AM",
+                  "11:00 AM - 1:00 PM",
+                  "1:00 PM - 3:00 PM",
+                  "3:00 PM - 5:00 PM",
+                  "5:00 PM - 7:00 PM",
+                  "7:00 PM - 9:00 PM",
+                  "9:00 PM - 11:00 PM",
                 ].map((slot, index) => (
                   <Option key={index} value={slot}>
                     {slot}

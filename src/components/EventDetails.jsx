@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import PaymentSuccessModal from "./PaymentSuccessModal";
-import { apiUrl } from "../contant"; // Ensure this is "https://server-7ynr.onrender.com"
+import { apiUrl } from "../contant";
 import { Calendar, MapPin, Users, Clock, Info, Trophy } from "lucide-react";
 
 const EventDetails = () => {
@@ -42,6 +42,7 @@ const EventDetails = () => {
       );
       if (!response.ok) throw new Error("Failed to fetch participants");
       const data = await response.json();
+
       setParticipants(data.successfulPayments);
     } catch (error) {
       setError(error.message);
@@ -150,7 +151,6 @@ const EventDetails = () => {
               throw new Error(errorData.error || "Payment confirmation failed");
             }
 
-            // Success: Update UI immediately
             setPaymentDetails({
               participantName: name,
               participantPhone: phone,
@@ -162,15 +162,7 @@ const EventDetails = () => {
             fetchParticipants();
           } catch (error) {
             console.error("Confirmation Error:", error);
-            // Handle modal closure: Webhook will update backend
-            alert(
-              "Payment may have succeeded. Please wait a moment or refresh to check your booking status."
-            );
-            // Check status after delay (webhook processing time)
-            setTimeout(() => {
-              fetchParticipants();
-              checkPaymentStatus(response.razorpay_payment_id);
-            }, 5000);
+            alert(`Payment Confirmation Failed: ${error.message}`);
           }
         },
         theme: {
@@ -179,57 +171,15 @@ const EventDetails = () => {
       };
 
       const rzp = new window.Razorpay(options);
+      rzp.open();
 
-      // Handle modal closure (cancel, back button, or manual close)
-      rzp.on("close", () => {
-        console.log("Razorpay modal closed");
-        alert("Payment process canceled. Please try again if needed.");
-      });
-
-      // Handle payment failure
-      rzp.on("payment.failed", (response) => {
-        console.log("Payment failed:", response.error.description);
+      rzp.on("payment.failed", function (response) {
         alert(`Payment Failed: ${response.error.description}`);
       });
-
-      rzp.open();
     } catch (error) {
       console.error("Payment Initialization Error:", error);
       alert(`Payment Initialization Failed: ${error.message}`);
     }
-  };
-
-  // Function to check payment status
-  const checkPaymentStatus = async (paymentId) => {
-    try {
-      const response = await fetch(
-        `${apiUrl}/events/${eventId}/successful-payments`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      const data = await response.json();
-      if (data.successfulPayments.some((p) => p.paymentId === paymentId)) {
-        setPaymentDetails({
-          participantName: name,
-          participantPhone: phone,
-          skillLevel: skillLevel,
-          paymentId: paymentId,
-          quantity: quantity,
-        });
-        setShowSuccessModal(true);
-      }
-    } catch (error) {
-      console.error("Error checking payment status:", error);
-    }
-  };
-
-  // Reset loading state when success modal is closed
-  const handleCloseSuccessModal = () => {
-    setShowSuccessModal(false);
   };
 
   if (loading) {
@@ -279,16 +229,21 @@ const EventDetails = () => {
           <div className="p-6 md:p-8">
             {/* Header */}
             <div className="flex justify-between items-center ">
+              {/* Venue and Map Pin together */}
               <div className="flex items-center space-x-2">
                 <MapPin className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 lg:h-8 lg:w-8 text-blue-600" />
+
                 <h1 className="text-lg sm:text-xl md:text-3xl lg:text-4xl font-bold text-gray-900">
                   {event.venueName}
                 </h1>
               </div>
+
+              {/* Slots Left */}
               <div className="px-2 py-1 sm:px-3 sm:py-1.5 md:px-4 md:py-2 bg-blue-100 text-blue-800 rounded-full font-semibold text-sm sm:text-base md:text-lg">
                 {event.participantsLimit - event.currentParticipants} slots left
               </div>
             </div>
+            {/* name of event */}
             <h2 className="text-sm text-black-500 mb-4">
               {capitalizeText(event.name)}
             </h2>
@@ -306,6 +261,7 @@ const EventDetails = () => {
                   </p>
                 </div>
               </div>
+
               <div className="flex items-center space-x-3">
                 <div className="p-3 bg-green-100 rounded-lg">
                   <Calendar className="h-6 w-6 text-green-600" />
@@ -313,7 +269,8 @@ const EventDetails = () => {
                 <div>
                   <p className="text-sm text-gray-500">Date</p>
                   <p className="font-semibold text-gray-900">
-                    {new Date(event.date).toLocaleDateString("en-GB")} (
+                    {new Date(event.date).toLocaleDateString("en-GB")}
+                    {/* add day */} (
                     {new Date(event.date).toLocaleDateString("en-GB", {
                       weekday: "long",
                     })}
@@ -321,6 +278,7 @@ const EventDetails = () => {
                   </p>
                 </div>
               </div>
+
               <div className="flex items-center space-x-3">
                 <div className="p-3 bg-orange-100 rounded-lg">
                   <Clock className="h-6 w-6 text-orange-600" />
@@ -331,7 +289,6 @@ const EventDetails = () => {
                 </div>
               </div>
             </div>
-
             {/* Instructions */}
             <div className="bg-gray-50 rounded-xl p-6">
               <div className="flex items-center space-x-2 mb-4">
@@ -350,7 +307,7 @@ const EventDetails = () => {
               </ul>
             </div>
 
-            {/* Payment Form */}
+            {/* Payment Form - Updated with skill level and quantity */}
             <div className="bg-gray-50 rounded-lg p-4 md:p-6 mb-6">
               <h2 className="text-lg font-semibold mb-4">Payment Details</h2>
               <div className="space-y-4">
@@ -378,6 +335,7 @@ const EventDetails = () => {
                     required
                   />
                 </div>
+                {/* New Skill Level Selection */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Skill Level
@@ -395,6 +353,7 @@ const EventDetails = () => {
                     </option>
                   </select>
                 </div>
+                {/* Quantity Selection */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mt-5 mb-2">
                     Select Slots (Max{" "}
@@ -456,15 +415,14 @@ const EventDetails = () => {
                 }`}
                 disabled={event.currentParticipants >= event.participantsLimit}
               >
-                {`Book ${quantity} Slot${quantity > 1 ? "s" : ""} · ₹${
-                  event.price * quantity
-                }`}
+                Book {quantity} Slot{quantity > 1 ? "s" : ""} · ₹
+                {event.price * quantity}
               </button>
             </div>
           </div>
         </div>
 
-        {/* Participants Table */}
+        {/* Participants Table - Updated for Responsiveness */}
         {participants.length > 0 && (
           <div className="mt-8 bg-white rounded-xl shadow-md overflow-hidden">
             <div className="p-4 sm:p-6 md:p-8">
@@ -525,9 +483,7 @@ const EventDetails = () => {
       </div>
       <PaymentSuccessModal
         isOpen={showSuccessModal}
-        onClose={() => {
-          setShowSuccessModal(false);
-        }}
+        onClose={() => setShowSuccessModal(false)}
         paymentDetails={paymentDetails}
         event={event}
       />

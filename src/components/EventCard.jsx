@@ -3,12 +3,18 @@ import axios from "axios";
 import { apiUrl } from "../contant";
 
 const EventCard = ({ event, handleDelete, setEditingEvent }) => {
-  const [isLoading, setIsLoading] = useState(false); // Loading state for API calls
+  const [isLoading, setIsLoading] = useState(false);
+  const [confirmationCount, setConfirmationCount] = useState(
+    event.confirmationCount || 0
+  );
+  const [cancellationCount, setCancellationCount] = useState(
+    event.cancellationCount || 0
+  );
+
   const formattedDate = new Date(event.date)
     .toLocaleDateString("en-GB")
     .replace(/\//g, "-");
 
-  // Handle Confirm button click
   const handleConfirm = async () => {
     if (!window.confirm("Send confirmation to all participants?")) return;
 
@@ -18,6 +24,7 @@ const EventCard = ({ event, handleDelete, setEditingEvent }) => {
         `${apiUrl}/events/${event._id}/send-confirmation`
       );
       console.log("Confirmation Response:", response.data);
+      setConfirmationCount(response.data.confirmationCount); // Update local state
       alert("Confirmation messages sent successfully!");
     } catch (error) {
       console.error(
@@ -30,7 +37,6 @@ const EventCard = ({ event, handleDelete, setEditingEvent }) => {
     }
   };
 
-  // Handle Cancel button click
   const handleCancel = async () => {
     if (!window.confirm("Send cancellation to all participants?")) return;
 
@@ -40,6 +46,7 @@ const EventCard = ({ event, handleDelete, setEditingEvent }) => {
         `${apiUrl}/events/${event._id}/send-cancellation`
       );
       console.log("Cancellation Response:", response.data);
+      setCancellationCount(response.data.cancellationCount); // Update local state
       alert("Cancellation messages sent successfully!");
     } catch (error) {
       console.error(
@@ -63,7 +70,7 @@ const EventCard = ({ event, handleDelete, setEditingEvent }) => {
       <div className="flex-grow flex flex-col sm:flex-row items-start sm:items-center sm:justify-between w-full">
         <div className="sm:w-1/2">
           <h3 className="text-base font-semibold text-gray-900">
-            {event.name}({event._id})
+            {event.name} ({event._id})
           </h3>
           <h4 className="text-sm font-semibold text-gray-900">
             {event.venueName}
@@ -73,6 +80,12 @@ const EventCard = ({ event, handleDelete, setEditingEvent }) => {
           <p className="text-xs sm:text-sm text-black-700">{formattedDate}</p>
           <p className="text-xs sm:text-sm text-black-700">
             Slots Left: {event.currentParticipants}/{event.participantsLimit}
+          </p>
+          <p className="text-xs sm:text-sm text-black-700">
+            Confirmations Sent: {confirmationCount}
+          </p>
+          <p className="text-xs sm:text-sm text-black-700">
+            Cancellations Sent: {cancellationCount}
           </p>
         </div>
 

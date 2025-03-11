@@ -105,26 +105,36 @@ const EventDetails = () => {
           name: name,
           contact: phone,
         },
+        // Enable all payment methods
         method: {
-          upi: 1,
-          netbanking: 1,
-          card: 1,
-          wallet: 1,
+          card: true,
+          netbanking: true,
+          upi: true,
+          wallet: true,
+          emi: true,
+          paylater: true,
         },
+        // Set which methods appear first (in order)
         config: {
           display: {
             blocks: {
               banks: {
-                name: "Most Used Methods",
-                instruments: [{ method: "upi" }, { method: "netbanking" }],
+                name: "Payment Methods",
+                instruments: [
+                  { method: "upi" },
+                  { method: "card" },
+                  { method: "netbanking" },
+                  { method: "wallet" },
+                ],
               },
             },
             sequence: ["block.banks"],
             preferences: {
-              show_default_blocks: false,
+              show_default_blocks: true,
             },
           },
         },
+        // Keep the rest of your handler code
         handler: async (response) => {
           try {
             const confirmResponse = await fetch(
@@ -145,12 +155,10 @@ const EventDetails = () => {
                 }),
               }
             );
-
             if (!confirmResponse.ok) {
               const errorData = await confirmResponse.json();
               throw new Error(errorData.error || "Payment confirmation failed");
             }
-
             setPaymentDetails({
               participantName: name,
               participantPhone: phone,

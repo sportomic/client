@@ -111,17 +111,17 @@ const AboutUs = () => {
           </h2>
           <div className="grid md:grid-cols-3 gap-8 text-center">
             <div>
-              <Counter end={500} />
+              <Counter end={900} />
               <p className="text-xl text-gray-600 mt-4">Active Users</p>
             </div>
             <div>
-              <Counter end={1900} />
+              <Counter end={1950} />
               <p className="text-xl text-gray-600 mt-4">
                 WhatsApp Community Members
               </p>
             </div>
             <div>
-              <Counter end={600} />
+              <Counter end={1000} />
               <p className="text-xl text-gray-600 mt-4">Games Conducted</p>
             </div>
           </div>

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import PaymentSuccessModal from "./PaymentSuccessModal";
 import { apiUrl } from "../contant";
-import { Calendar, MapPin, Users, Clock, Info, Trophy } from "lucide-react";
+import { Calendar, MapPin, Clock, Info, Trophy } from "lucide-react";
+import { useRazorpay } from "react-razorpay";
 
 const EventDetails = () => {
   const eventId = window.location.pathname.split("/").pop();
@@ -15,15 +16,27 @@ const EventDetails = () => {
   const [error, setError] = useState(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [paymentDetails, setPaymentDetails] = useState(null);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const [orderId, setOrderId] = useState(null); // Track orderId for polling
 
+  const {
+    error: razorpayError,
+    isLoading: razorpayLoading,
+    Razorpay,
+  } = useRazorpay();
+
+  // Fetch event details
   useEffect(() => {
     const fetchEventDetails = async () => {
+      console.log(`Fetching event details for eventId: ${eventId}`);
       try {
         const response = await fetch(`${apiUrl}/events/${eventId}`);
         if (!response.ok) throw new Error("Failed to fetch event details");
         const data = await response.json();
+        console.log("Event details fetched successfully:", data);
         setEvent(data);
       } catch (error) {
+        console.error("Error fetching event details:", error.message);
         setError(error.message);
       } finally {
         setLoading(false);
@@ -35,16 +48,22 @@ const EventDetails = () => {
     }
   }, [eventId]);
 
+  // Fetch participants
   const fetchParticipants = async () => {
+    console.log(`Fetching participants for eventId: ${eventId}`);
     try {
       const response = await fetch(
         `${apiUrl}/events/${eventId}/successful-payments`
       );
       if (!response.ok) throw new Error("Failed to fetch participants");
       const data = await response.json();
-
+      console.log(
+        "Participants fetched successfully:",
+        data.successfulPayments
+      );
       setParticipants(data.successfulPayments);
     } catch (error) {
+      console.error("Error fetching participants:", error.message);
       setError(error.message);
     }
   };
@@ -55,25 +74,85 @@ const EventDetails = () => {
     }
   }, [eventId]);
 
+  // Poll for successful payments after payment initiation
+  useEffect(() => {
+    let interval;
+    if (orderId && isProcessingPayment) {
+      console.log(`Starting polling for orderId: ${orderId}`);
+      interval = setInterval(async () => {
+        await fetchParticipants();
+        const participant = participants.find(
+          (p) =>
+            p.paymentStatus === "success" &&
+            p.name === name &&
+            p.orderId === orderId
+        );
+        if (participant) {
+          console.log("Payment confirmed via polling:", participant);
+          setPaymentDetails({
+            participantName: name,
+            participantPhone: phone,
+            skillLevel,
+            paymentId: participant.paymentId,
+            quantity,
+          });
+          setShowSuccessModal(true);
+          setIsProcessingPayment(false);
+          clearInterval(interval);
+        }
+      }, 3000); // Poll every 3 seconds
+    }
+    return () => {
+      if (interval) {
+        console.log("Stopping polling");
+        clearInterval(interval);
+      }
+    };
+  }, [
+    orderId,
+    isProcessingPayment,
+    participants,
+    name,
+    phone,
+    skillLevel,
+    quantity,
+    eventId,
+  ]);
+
   const totalAmount = event ? event.price * quantity : 0;
 
   const handlePayment = async () => {
+    console.log("Initiating payment process...");
     if (!/^\d{10}$/.test(phone)) {
+      console.warn("Invalid phone number entered:", phone);
       alert("Please enter a valid 10-digit phone number");
       return;
     }
-
     if (!phone || !name) {
+      console.warn("Missing required fields - Name:", name, "Phone:", phone);
       alert("Please enter phone and name");
       return;
     }
-
     if (!skillLevel) {
+      console.warn("Skill level not selected");
       alert("Please select your skill level");
       return;
     }
+    if (razorpayLoading) {
+      console.warn("Razorpay is still loading...");
+      alert("Please wait, Razorpay is loading...");
+      return;
+    }
+    if (razorpayError) {
+      console.error("Razorpay failed to load:", razorpayError);
+      alert("Failed to load Razorpay. Please try again later.");
+      return;
+    }
+
+    setIsProcessingPayment(true);
 
     try {
+      console.log("Sending booking request to server...");
       const response = await fetch(`${apiUrl}/events/${eventId}/book`, {
         method: "POST",
         headers: {
@@ -89,23 +168,25 @@ const EventDetails = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.error("Booking failed with error:", errorData);
         throw new Error(errorData.error || "Booking failed");
       }
 
       const order = await response.json();
+      console.log("Order created successfully:", order);
+      setOrderId(order.orderId); // Store orderId for polling
 
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-        amount: totalAmount,
+        amount: totalAmount * 100,
         currency: "INR",
         name: order.eventName,
         description: "Event Booking",
         order_id: order.orderId,
         prefill: {
-          name: name,
+          name,
           contact: phone,
         },
-        // Enable all payment methods
         method: {
           card: true,
           netbanking: true,
@@ -114,7 +195,6 @@ const EventDetails = () => {
           emi: true,
           paylater: true,
         },
-        // Set which methods appear first (in order)
         config: {
           display: {
             blocks: {
@@ -134,59 +214,49 @@ const EventDetails = () => {
             },
           },
         },
-        // Keep the rest of your handler code
         handler: async (response) => {
-          try {
-            const confirmResponse = await fetch(
-              `${apiUrl}/events/${eventId}/confirm`,
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  paymentId: response.razorpay_payment_id,
-                  razorpayOrderId: response.razorpay_order_id,
-                  razorpaySignature: response.razorpay_signature,
-                  participantName: name,
-                  participantPhone: phone,
-                  skillLevel: skillLevel,
-                  quantity: quantity,
-                }),
-              }
-            );
-            if (!confirmResponse.ok) {
-              const errorData = await confirmResponse.json();
-              throw new Error(errorData.error || "Payment confirmation failed");
-            }
-            setPaymentDetails({
-              participantName: name,
-              participantPhone: phone,
-              skillLevel: skillLevel,
-              paymentId: response.razorpay_payment_id,
-              quantity: quantity,
-            });
-            setShowSuccessModal(true);
-            fetchParticipants();
-          } catch (error) {
-            console.error("Confirmation Error:", error);
-            alert(`Payment Confirmation Failed: ${error.message}`);
-          }
+          console.log("Payment successful (client-side), response:", response);
+          setPaymentDetails({
+            participantName: name,
+            participantPhone: phone,
+            skillLevel,
+            paymentId: response.razorpay_payment_id,
+            quantity,
+          });
+          setShowSuccessModal(true);
+          fetchParticipants();
+          setIsProcessingPayment(false);
+          alert("Payment completed successfully!");
+        },
+        modal: {
+          ondismiss: () => {
+            console.log("Payment modal dismissed by user");
+            alert("Payment cancelled by user");
+            setIsProcessingPayment(false); // Close processing overlay
+            setOrderId(null); // Stop polling
+          },
         },
         theme: {
           color: "#14B8A6",
         },
       };
 
-      const rzp = new window.Razorpay(options);
-      rzp.open();
+      console.log("Opening Razorpay checkout with options:", options);
+      const rzp = new Razorpay(options);
 
-      rzp.on("payment.failed", function (response) {
+      rzp.on("payment.failed", (response) => {
+        console.error("Payment failed:", response.error);
         alert(`Payment Failed: ${response.error.description}`);
+        setIsProcessingPayment(false);
+        setOrderId(null); // Stop polling on failure
       });
+
+      rzp.open();
     } catch (error) {
-      console.error("Payment Initialization Error:", error);
+      console.error("Payment Initialization Error:", error.message);
       alert(`Payment Initialization Failed: ${error.message}`);
+      setIsProcessingPayment(false);
+      setOrderId(null); // Stop polling on initialization error
     }
   };
 
@@ -206,6 +276,8 @@ const EventDetails = () => {
     );
   }
 
+  if (!event) return null;
+
   const capitalizeText = (text) => {
     return text
       .split(" ")
@@ -213,12 +285,22 @@ const EventDetails = () => {
       .join(" ");
   };
 
-  if (!event) return null;
-
   return (
-    <div className="min-h-screen bg-gray-50 mt-20">
+    <div className="min-h-screen bg-gray-50 mt-20 relative">
+      {isProcessingPayment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg text-center">
+            <p className="text-lg font-semibold text-gray-800">
+              Processing payment...
+            </p>
+            <p className="text-sm text-gray-600 mt-2">
+              Please wait or check back later for confirmation.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
-        {/* Single Image */}
         {event.venueImage && (
           <div className="mb-8 rounded-2xl overflow-hidden shadow-xl">
             <div className="relative">
@@ -231,32 +313,22 @@ const EventDetails = () => {
             </div>
           </div>
         )}
-
-        {/* Event Details Card */}
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
           <div className="p-6 md:p-8">
-            {/* Header */}
-            <div className="flex justify-between items-center ">
-              {/* Venue and Map Pin together */}
+            <div className="flex justify-between items-center">
               <div className="flex items-center space-x-2">
                 <MapPin className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 lg:h-8 lg:w-8 text-blue-600" />
-
                 <h1 className="text-lg sm:text-xl md:text-3xl lg:text-4xl font-bold text-gray-900">
                   {event.venueName}
                 </h1>
               </div>
-
-              {/* Slots Left */}
               <div className="px-2 py-1 sm:px-3 sm:py-1.5 md:px-4 md:py-2 bg-blue-100 text-blue-800 rounded-full font-semibold text-sm sm:text-base md:text-lg">
                 {event.participantsLimit - event.currentParticipants} slots left
               </div>
             </div>
-            {/* name of event */}
             <h2 className="text-sm text-black-500 mb-4">
               {capitalizeText(event.name)}
             </h2>
-
-            {/* Event Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
               <div className="flex items-center space-x-3">
                 <div className="p-3 bg-purple-100 rounded-lg">
@@ -269,7 +341,6 @@ const EventDetails = () => {
                   </p>
                 </div>
               </div>
-
               <div className="flex items-center space-x-3">
                 <div className="p-3 bg-green-100 rounded-lg">
                   <Calendar className="h-6 w-6 text-green-600" />
@@ -277,8 +348,7 @@ const EventDetails = () => {
                 <div>
                   <p className="text-sm text-gray-500">Date</p>
                   <p className="font-semibold text-gray-900">
-                    {new Date(event.date).toLocaleDateString("en-GB")}
-                    {/* add day */} (
+                    {new Date(event.date).toLocaleDateString("en-GB")} (
                     {new Date(event.date).toLocaleDateString("en-GB", {
                       weekday: "long",
                     })}
@@ -286,7 +356,6 @@ const EventDetails = () => {
                   </p>
                 </div>
               </div>
-
               <div className="flex items-center space-x-3">
                 <div className="p-3 bg-orange-100 rounded-lg">
                   <Clock className="h-6 w-6 text-orange-600" />
@@ -297,7 +366,6 @@ const EventDetails = () => {
                 </div>
               </div>
             </div>
-            {/* Instructions */}
             <div className="bg-gray-50 rounded-xl p-6">
               <div className="flex items-center space-x-2 mb-4">
                 <Info className="h-5 w-5 text-gray-600" />
@@ -314,8 +382,6 @@ const EventDetails = () => {
                 ))}
               </ul>
             </div>
-
-            {/* Payment Form - Updated with skill level and quantity */}
             <div className="bg-gray-50 rounded-lg p-4 md:p-6 mb-6">
               <h2 className="text-lg font-semibold mb-4">Payment Details</h2>
               <div className="space-y-4">
@@ -329,6 +395,7 @@ const EventDetails = () => {
                     onChange={(e) => setName(e.target.value)}
                     className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                     required
+                    disabled={isProcessingPayment}
                   />
                 </div>
                 <div>
@@ -341,9 +408,9 @@ const EventDetails = () => {
                     onChange={(e) => setPhone(e.target.value)}
                     className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                     required
+                    disabled={isProcessingPayment}
                   />
                 </div>
-                {/* New Skill Level Selection */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Skill Level
@@ -353,6 +420,7 @@ const EventDetails = () => {
                     onChange={(e) => setSkillLevel(e.target.value)}
                     className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                     required
+                    disabled={isProcessingPayment}
                   >
                     <option value="">Select your skill level</option>
                     <option value="beginner">Beginner</option>
@@ -361,7 +429,6 @@ const EventDetails = () => {
                     </option>
                   </select>
                 </div>
-                {/* Quantity Selection */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mt-5 mb-2">
                     Select Slots (Max{" "}
@@ -375,7 +442,7 @@ const EventDetails = () => {
                     <button
                       type="button"
                       onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                      disabled={quantity === 1}
+                      disabled={quantity === 1 || isProcessingPayment}
                       className="h-10 w-10 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       -
@@ -395,7 +462,8 @@ const EventDetails = () => {
                       }
                       disabled={
                         quantity >=
-                        event.participantsLimit - event.currentParticipants
+                          event.participantsLimit - event.currentParticipants ||
+                        isProcessingPayment
                       }
                       className="h-10 w-10 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -405,32 +473,41 @@ const EventDetails = () => {
                 </div>
               </div>
             </div>
-
-            {/* Total and Button */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
               <div>
                 <span className="text-sm text-gray-600">TOTAL</span>
                 <div className="text-2xl font-bold text-gray-900">
-                  INR {event.price * quantity}
+                  INR {totalAmount}
                 </div>
               </div>
               <button
                 onClick={handlePayment}
                 className={`w-full sm:w-auto px-8 py-3 rounded-lg font-medium ${
-                  event.currentParticipants >= event.participantsLimit
+                  event.currentParticipants >= event.participantsLimit ||
+                  isProcessingPayment
                     ? "bg-gray-400 text-gray-800 cursor-not-allowed"
                     : "bg-teal-600 text-white hover:bg-teal-700"
                 }`}
-                disabled={event.currentParticipants >= event.participantsLimit}
+                disabled={
+                  event.currentParticipants >= event.participantsLimit ||
+                  isProcessingPayment
+                }
               >
-                Book {quantity} Slot{quantity > 1 ? "s" : ""} · ₹
-                {event.price * quantity}
+                {isProcessingPayment
+                  ? "Processing..."
+                  : `Book ${quantity} Slot${
+                      quantity > 1 ? "s" : ""
+                    } · ₹${totalAmount}`}
               </button>
             </div>
+            {razorpayError && (
+              <div className="mt-4 text-red-600">
+                Error loading Razorpay:{" "}
+                {razorpayError.message || "Unknown error"}
+              </div>
+            )}
           </div>
         </div>
-
-        {/* Participants Table - Updated for Responsiveness */}
         {participants.length > 0 && (
           <div className="mt-8 bg-white rounded-xl shadow-md overflow-hidden">
             <div className="p-4 sm:p-6 md:p-8">

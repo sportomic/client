@@ -246,8 +246,8 @@ const EventList = () => {
   const filteredEvents = filterEventsByDate(events);
 
   const carouselImages = [
-    womens1,
-    womens2,
+    // womens1,
+    // womens2,
     maskgroup6,
     maskgroup5,
     maskgroup4,

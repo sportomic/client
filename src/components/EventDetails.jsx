@@ -17,13 +17,46 @@ const EventDetails = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [paymentDetails, setPaymentDetails] = useState(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  const [orderId, setOrderId] = useState(null); // Track orderId for polling
+  const [orderId, setOrderId] = useState(null);
+  const [isRazorpayReady, setIsRazorpayReady] = useState(false); // New state to track Razorpay readiness
 
   const {
     error: razorpayError,
     isLoading: razorpayLoading,
     Razorpay,
   } = useRazorpay();
+
+  // Monitor Razorpay loading state and ensure readiness
+  useEffect(() => {
+    console.log(
+      "Razorpay Loading State:",
+      razorpayLoading,
+      "Error:",
+      razorpayError
+    );
+    if (!razorpayLoading && !razorpayError && Razorpay) {
+      console.log("Razorpay SDK is ready");
+      setIsRazorpayReady(true);
+    } else if (razorpayError) {
+      console.error("Razorpay failed to load:", razorpayError);
+      setIsRazorpayReady(false);
+    }
+  }, [razorpayLoading, razorpayError, Razorpay]);
+
+  // Fallback to ensure Razorpay readiness after a timeout (e.g., network delay)
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (razorpayLoading && !isRazorpayReady) {
+        console.warn(
+          "Razorpay loading took too long, assuming ready if no error"
+        );
+        if (!razorpayError && Razorpay) {
+          setIsRazorpayReady(true);
+        }
+      }
+    }, 5000); // 5-second fallback
+    return () => clearTimeout(timeout);
+  }, [razorpayLoading, razorpayError, Razorpay]);
 
   // Fetch event details
   useEffect(() => {
@@ -43,9 +76,7 @@ const EventDetails = () => {
       }
     };
 
-    if (eventId) {
-      fetchEventDetails();
-    }
+    if (eventId) fetchEventDetails();
   }, [eventId]);
 
   // Fetch participants
@@ -69,12 +100,10 @@ const EventDetails = () => {
   };
 
   useEffect(() => {
-    if (eventId) {
-      fetchParticipants();
-    }
+    if (eventId) fetchParticipants();
   }, [eventId]);
 
-  // Poll for successful payments after payment initiation
+  // Poll for successful payments
   useEffect(() => {
     let interval;
     if (orderId && isProcessingPayment) {
@@ -100,7 +129,7 @@ const EventDetails = () => {
           setIsProcessingPayment(false);
           clearInterval(interval);
         }
-      }, 3000); // Poll every 3 seconds
+      }, 3000);
     }
     return () => {
       if (interval) {
@@ -128,24 +157,16 @@ const EventDetails = () => {
       alert("Please enter a valid 10-digit phone number");
       return;
     }
-    if (!phone || !name) {
-      console.warn("Missing required fields - Name:", name, "Phone:", phone);
-      alert("Please enter phone and name");
-      return;
-    }
-    if (!skillLevel) {
-      console.warn("Skill level not selected");
-      alert("Please select your skill level");
-      return;
-    }
-    if (razorpayLoading) {
-      console.warn("Razorpay is still loading...");
-      alert("Please wait, Razorpay is loading...");
-      return;
-    }
-    if (razorpayError) {
-      console.error("Razorpay failed to load:", razorpayError);
-      alert("Failed to load Razorpay. Please try again later.");
+    if (!phone || !name || !skillLevel) {
+      console.warn(
+        "Missing required fields - Name:",
+        name,
+        "Phone:",
+        phone,
+        "Skill:",
+        skillLevel
+      );
+      alert("Please fill in all required fields");
       return;
     }
 
@@ -155,15 +176,8 @@ const EventDetails = () => {
       console.log("Sending booking request to server...");
       const response = await fetch(`${apiUrl}/events/${eventId}/book`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name,
-          phone,
-          skillLevel,
-          quantity,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, phone, skillLevel, quantity }),
       });
 
       if (!response.ok) {
@@ -174,7 +188,7 @@ const EventDetails = () => {
 
       const order = await response.json();
       console.log("Order created successfully:", order);
-      setOrderId(order.orderId); // Store orderId for polling
+      setOrderId(order.orderId);
 
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID,
@@ -183,10 +197,7 @@ const EventDetails = () => {
         name: order.eventName,
         description: "Event Booking",
         order_id: order.orderId,
-        prefill: {
-          name,
-          contact: phone,
-        },
+        prefill: { name, contact: phone },
         method: {
           card: true,
           netbanking: true,
@@ -209,9 +220,7 @@ const EventDetails = () => {
               },
             },
             sequence: ["block.banks"],
-            preferences: {
-              show_default_blocks: true,
-            },
+            preferences: { show_default_blocks: true },
           },
         },
         handler: async (response) => {
@@ -232,13 +241,11 @@ const EventDetails = () => {
           ondismiss: () => {
             console.log("Payment modal dismissed by user");
             alert("Payment cancelled by user");
-            setIsProcessingPayment(false); // Close processing overlay
-            setOrderId(null); // Stop polling
+            setIsProcessingPayment(false);
+            setOrderId(null);
           },
         },
-        theme: {
-          color: "#14B8A6",
-        },
+        theme: { color: "#14B8A6" },
       };
 
       console.log("Opening Razorpay checkout with options:", options);
@@ -248,7 +255,7 @@ const EventDetails = () => {
         console.error("Payment failed:", response.error);
         alert(`Payment Failed: ${response.error.description}`);
         setIsProcessingPayment(false);
-        setOrderId(null); // Stop polling on failure
+        setOrderId(null);
       });
 
       rzp.open();
@@ -256,7 +263,7 @@ const EventDetails = () => {
       console.error("Payment Initialization Error:", error.message);
       alert(`Payment Initialization Failed: ${error.message}`);
       setIsProcessingPayment(false);
-      setOrderId(null); // Stop polling on initialization error
+      setOrderId(null);
     }
   };
 
@@ -278,12 +285,17 @@ const EventDetails = () => {
 
   if (!event) return null;
 
-  const capitalizeText = (text) => {
-    return text
+  const capitalizeText = (text) =>
+    text
       .split(" ")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(" ");
-  };
+
+  const isBookButtonDisabled =
+    event.currentParticipants >= event.participantsLimit ||
+    isProcessingPayment ||
+    !isRazorpayReady || // Use custom readiness state instead of razorpayLoading
+    !!razorpayError;
 
   return (
     <div className="min-h-screen bg-gray-50 mt-20 relative">
@@ -483,17 +495,15 @@ const EventDetails = () => {
               <button
                 onClick={handlePayment}
                 className={`w-full sm:w-auto px-8 py-3 rounded-lg font-medium ${
-                  event.currentParticipants >= event.participantsLimit ||
-                  isProcessingPayment
+                  isBookButtonDisabled
                     ? "bg-gray-400 text-gray-800 cursor-not-allowed"
                     : "bg-teal-600 text-white hover:bg-teal-700"
                 }`}
-                disabled={
-                  event.currentParticipants >= event.participantsLimit ||
-                  isProcessingPayment
-                }
+                disabled={isBookButtonDisabled}
               >
-                {isProcessingPayment
+                {!isRazorpayReady
+                  ? "Loading Payment..."
+                  : isProcessingPayment
                   ? "Processing..."
                   : `Book ${quantity} Slot${
                       quantity > 1 ? "s" : ""

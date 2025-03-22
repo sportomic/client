@@ -115,7 +115,7 @@ const AboutUs = () => {
               <p className="text-xl text-gray-600 mt-4">Active Users</p>
             </div>
             <div>
-              <Counter end={1950} />
+              <Counter end={2250} />
               <p className="text-xl text-gray-600 mt-4">
                 WhatsApp Community Members
               </p>

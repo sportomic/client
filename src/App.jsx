@@ -25,6 +25,7 @@ import TermsAndConditions from "./components/TermsAndConditions";
 import PrivacyPolicy from "./components/PrivacyPolicy";
 import { AdminProvider, useAdmin } from "./contexts/AdminContext.jsx"; // Add useAdmin to imports
 import ProtectedRoute from "./components/ProtectedRoute";
+import { useGoogleAnalytics } from "./hooks/useGoogleAnalytics.js";
 
 // Component to handle login route redirection
 const PrivateLoginRoute = ({ children }) => {
@@ -50,63 +51,74 @@ const HeaderWrapper = () => {
   return isAdminRoute ? <HeaderAdmin /> : <Header />;
 };
 
+// Create a new component to handle analytics
+const AppContent = () => {
+  useGoogleAnalytics();
+
+  return (
+    <>
+      <HeaderWrapper />
+      <main className="min-h-screen">
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/home" element={<Home />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/terms" element={<TermsAndConditions />} />
+          <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/" element={<Events />} />
+          <Route path="/event/:eventId" element={<EventDetails />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route
+            path="/login"
+            element={
+              <PrivateLoginRoute>
+                <Login />
+              </PrivateLoginRoute>
+            }
+          />
+          <Route path="/contact" element={<ContactUs />} />
+
+          {/* Protected Admin Routes */}
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/add-event"
+            element={
+              <ProtectedRoute>
+                <AddEvent />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/download"
+            element={
+              <ProtectedRoute>
+                <DownloadExcel />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Optional: Catch-all route */}
+          <Route path="*" element={<h1>Not Found</h1>} />
+        </Routes>
+      </main>
+      <Footer />
+      <Analytics />
+    </>
+  );
+};
+
 function App() {
   return (
     <AdminProvider>
       <Router>
-        <HeaderWrapper />
-        <main className="min-h-screen">
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/home" element={<Home />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/terms" element={<TermsAndConditions />} />
-            <Route path="/privacy" element={<PrivacyPolicy />} />
-            <Route path="/" element={<Events />} />
-            <Route path="/event/:eventId" element={<EventDetails />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route
-              path="/login"
-              element={
-                <PrivateLoginRoute>
-                  <Login />
-                </PrivateLoginRoute>
-              }
-            />
-            <Route path="/contact" element={<ContactUs />} />
-
-            {/* Protected Admin Routes */}
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute>
-                  <AdminDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/add-event"
-              element={
-                <ProtectedRoute>
-                  <AddEvent />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/download"
-              element={
-                <ProtectedRoute>
-                  <DownloadExcel />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* Optional: Catch-all route */}
-            <Route path="*" element={<h1>Not Found</h1>} />
-          </Routes>
-        </main>
-        <Footer />
-        <Analytics />
+        <AppContent />
       </Router>
     </AdminProvider>
   );

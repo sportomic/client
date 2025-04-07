@@ -1,14 +1,12 @@
-import { useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+import { trackPageView } from '../utils/analytics';
 
 export const useGoogleAnalytics = () => {
   const location = useLocation();
 
   useEffect(() => {
-    if (typeof window.gtag === "function") {
-      window.gtag("event", "page_view", {
-        page_path: location.pathname + location.search,
-      });
-    }
+    const path = location.pathname + location.search;
+    trackPageView(path);
   }, [location]);
 };

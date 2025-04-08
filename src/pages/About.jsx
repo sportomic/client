@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { ArrowUpRight } from "lucide-react";
+import { motion } from "framer-motion";
 
 // Import your images (assuming the import paths remain the same)
 import group from "../assets/images/groupImage.jpg";
@@ -85,11 +86,33 @@ const AboutUs = () => {
     },
   ];
 
+  const fadeInUp = {
+    initial: { opacity: 0, y: 50 },
+    whileInView: { opacity: 1, y: 0 },
+    viewport: { once: true },
+    transition: { duration: 1 },
+  };
+
+  const staggerChildren = {
+    initial: {},
+    whileInView: {
+      transition: {
+        staggerChildren: 0.2,
+      },
+    },
+    viewport: { once: true },
+  };
+
   return (
     <div className="min-h-screen mt-20 bg-gradient-to-br from-blue-50 to-blue-100 p-6 md:p-12">
-      <div className="max-w-7xl  mx-auto">
+      <div className="max-w-7xl mx-auto">
         {/* Logo and Heading */}
-        <div className="text-center mb-16">
+        <motion.div
+          className="text-center mb-16"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1 }}
+        >
           <img
             src={logo}
             alt="Bluejersey18"
@@ -102,33 +125,47 @@ const AboutUs = () => {
             Connecting sports enthusiasts, providing venues, coaching, and a
             vibrant community experience
           </p>
-        </div>
+        </motion.div>
 
         {/* Community Statistics Section */}
-        <div className="bg-white rounded-3xl shadow-2xl p-8 md:p-12 mb-16">
+        <motion.div
+          className="bg-white rounded-3xl shadow-2xl p-8 md:p-12 mb-16"
+          variants={fadeInUp}
+          whileInView="whileInView"
+          initial="initial"
+          viewport={{ once: true }}
+        >
           <h2 className="text-3xl font-bold text-center text-blue-600 mb-10">
             Our Community Impact
           </h2>
-          <div className="grid md:grid-cols-3 gap-8 text-center">
-            <div>
-              <Counter end={900} />
-              <p className="text-xl text-gray-600 mt-4">Active Users</p>
-            </div>
-            <div>
-              <Counter end={2250} />
-              <p className="text-xl text-gray-600 mt-4">
-                WhatsApp Community Members
-              </p>
-            </div>
-            <div>
-              <Counter end={1000} />
-              <p className="text-xl text-gray-600 mt-4">Games Conducted</p>
-            </div>
-          </div>
-        </div>
+          <motion.div
+            className="grid md:grid-cols-3 gap-8 text-center"
+            variants={staggerChildren}
+            initial="initial"
+            whileInView="whileInView"
+          >
+            {[900, 2250, 1000].map((value, index) => (
+              <motion.div key={index} variants={fadeInUp}>
+                <Counter end={value} />
+                <p className="text-xl text-gray-600 mt-4">
+                  {index === 0
+                    ? "Active Users"
+                    : index === 1
+                    ? "WhatsApp Community Members"
+                    : "Games Conducted"}
+                </p>
+              </motion.div>
+            ))}
+          </motion.div>
+        </motion.div>
 
         {/* Feature Cards */}
-        <div className="grid md:grid-cols-3 gap-8 mb-16">
+        <motion.div
+          className="grid md:grid-cols-3 gap-8 mb-16"
+          variants={staggerChildren}
+          initial="initial"
+          whileInView="whileInView"
+        >
           {[
             {
               img: about,
@@ -146,8 +183,9 @@ const AboutUs = () => {
               desc: "Get the latest sports events, news, and community updates",
             },
           ].map((card, index) => (
-            <div
+            <motion.div
               key={index}
+              variants={fadeInUp}
               className="bg-white rounded-2xl overflow-hidden shadow-xl transform transition-all duration-300 hover:scale-105 hover:shadow-2xl"
             >
               <img
@@ -161,20 +199,32 @@ const AboutUs = () => {
                 </h3>
                 <p className="text-gray-600">{card.desc}</p>
               </div>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
 
         {/* Community Section */}
-        <div className="bg-white rounded-3xl shadow-2xl p-8 md:p-12">
+        <motion.div
+          className="bg-white rounded-3xl shadow-2xl p-8 md:p-12"
+          variants={fadeInUp}
+          whileInView="whileInView"
+          initial="initial"
+          viewport={{ once: true }}
+        >
           <h2 className="text-3xl font-bold text-center text-blue-600 mb-10">
             Join Our Sports Communities
           </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 gap-6">
+          <motion.div
+            className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 gap-6"
+            variants={staggerChildren}
+            initial="initial"
+            whileInView="whileInView"
+          >
             {sports.map((sport, index) => (
-              <a
+              <motion.a
                 href={sport.link}
                 key={index}
+                variants={fadeInUp}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="group bg-gray-50 rounded-2xl p-4 text-center transition-all duration-300 hover:bg-blue-50 hover:shadow-lg"
@@ -190,10 +240,10 @@ const AboutUs = () => {
                   {sport.name}
                   <ArrowUpRight className="ml-2 w-4 h-4 text-gray-400 group-hover:text-blue-500" />
                 </div>
-              </a>
+              </motion.a>
             ))}
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </div>
     </div>
   );

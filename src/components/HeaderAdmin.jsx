@@ -1,13 +1,35 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import logo from "../assets/images/logo.svg";
-import { useAdmin } from "../contexts/AdminContext.jsx"; // Import useAdmin from AdminContext
+import { useAdmin } from "../contexts/AdminContext.jsx";
+import { apiUrl } from "../contant.js";
 
 const HeaderAdmin = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout } = useAdmin(); // Get the logout function from AdminContext
+  const { logout } = useAdmin();
+
+  // Add function to fetch unread count
+  const fetchUnreadCount = async () => {
+    try {
+      const response = await fetch(`${apiUrl}/contact/unread/count`);
+      if (response.ok) {
+        const data = await response.json();
+        setUnreadCount(data.unreadCount);
+      }
+    } catch (error) {
+      console.error("Failed to fetch unread count:", error);
+    }
+  };
+
+  // Fetch unread count on component mount and every 30 seconds
+  useEffect(() => {
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleNavigation = () => {
     setIsOpen(false); // Close menu when logo is clicked
@@ -23,6 +45,26 @@ const HeaderAdmin = () => {
     setIsOpen(false); // Close menu when logout button is clicked
     navigate("/login"); // Navigate to login page
   };
+
+  // Modify the navigation links array
+  const navLinks = [
+    { path: "/admin", label: "Manage Event" },
+    { path: "/add-event", label: "Add Event" },
+    { path: "/download", label: "Download Report" },
+    {
+      path: "/inquiries",
+      label: (
+        <div className="flex items-center gap-2">
+          Inquiries
+          {unreadCount > 0 && (
+            <span className="inline-flex items-center justify-center w-6 h-6 text-sm font-bold text-white bg-red-500 rounded-full">
+              {unreadCount}
+            </span>
+          )}
+        </div>
+      ),
+    },
+  ];
 
   return (
     <header className="fixed top-0 w-full bg-white shadow-lg z-50">
@@ -67,11 +109,7 @@ const HeaderAdmin = () => {
             isOpen ? "block" : "hidden"
           } absolute top-20 left-0 w-full bg-white md:static md:flex md:gap-8 md:w-auto`}
         >
-          {[
-            { path: "/admin", label: "Manage Event" },
-            { path: "/add-event", label: "Add Event" },
-            { path: "/download", label: "Download Report" },
-          ].map((item) => (
+          {navLinks.map((item) => (
             <li key={item.path} className="md:inline-block">
               <Link
                 to={item.path}

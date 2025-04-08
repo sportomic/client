@@ -26,6 +26,7 @@ import PrivacyPolicy from "./components/PrivacyPolicy";
 import { AdminProvider, useAdmin } from "./contexts/AdminContext.jsx"; // Add useAdmin to imports
 import ProtectedRoute from "./components/ProtectedRoute";
 import { useGoogleAnalytics } from "./hooks/useGoogleAnalytics.js";
+import Inquiries from "./components/Inquiries.jsx";
 
 // Component to handle login route redirection
 const PrivateLoginRoute = ({ children }) => {
@@ -47,7 +48,8 @@ const HeaderWrapper = () => {
   const isAdminRoute =
     location.pathname.startsWith("/admin") ||
     location.pathname === "/add-event" ||
-    location.pathname === "/download";
+    location.pathname === "/download" ||
+    location.pathname === "/inquiries";
   return isAdminRoute ? <HeaderAdmin /> : <Header />;
 };
 
@@ -100,6 +102,14 @@ const AppContent = () => {
             element={
               <ProtectedRoute>
                 <DownloadExcel />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/inquiries"
+            element={
+              <ProtectedRoute>
+                <Inquiries />
               </ProtectedRoute>
             }
           />

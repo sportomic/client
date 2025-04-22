@@ -11,6 +11,7 @@ import maskgroup3 from "../assets/images/mask-group-3.jpg";
 import womens1 from "../assets/images/womens1.png";
 import womens2 from "../assets/images/womens2.png";
 import Carousel from "./Carousel";
+import { SPORTS_LIST } from "../constants/sportsList";
 
 const EventSkeleton = () => {
   return (
@@ -74,34 +75,49 @@ const handleShare = async (event) => {
 };
 
 const EventList = () => {
-  const [events, setEvents] = useState([]);
-  const [availableSports, setAvailableSports] = useState([]);
+  const [allEvents, setAllEvents] = useState([]); // Store all events
+  const [filteredEvents, setFilteredEvents] = useState([]); // Store filtered events
   const [selectedSport, setSelectedSport] = useState("all");
   const [selectedDateFilter, setSelectedDateFilter] = useState("today");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+
+  // Fetch events only once
   useEffect(() => {
-    fetchEvents(selectedSport);
-  }, [selectedSport]);
+    const fetchAllEvents = async () => {
+      setIsLoading(true);
+      try {
+        const response = await axios.get(`${apiUrl}/events`);
+        setAllEvents(response.data.events);
+        setFilteredEvents(response.data.events);
+      } catch (error) {
+        console.error("Error fetching events:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const fetchEvents = async (sport) => {
-    setIsLoading(true);
-    try {
-      const response = await axios.get(`${apiUrl}/events?sport=${sport}`);
-      const { events: data, availableSports } = response.data;
+    fetchAllEvents();
+  }, []); // Empty dependency array - fetch only once
 
-      const sortedEvents = sortEventsByDateAndTime(data);
+  // Handle sport and date filtering
+  useEffect(() => {
+    let result = [...allEvents];
 
-      setEvents(sortedEvents);
-      setAvailableSports(["all", ...availableSports]);
-      setIsLoading(false);
-    } catch (error) {
-      console.error("Error fetching events:", error);
-      setError(error.message);
-      setIsLoading(false);
+    // Apply sport filter
+    if (selectedSport !== "all") {
+      result = result.filter(
+        (event) =>
+          event.sportsName.toLowerCase() === selectedSport.toLowerCase()
+      );
     }
-  };
+
+    // Apply date filter
+    result = filterEventsByDate(result);
+
+    setFilteredEvents(result);
+  }, [selectedSport, selectedDateFilter, allEvents]);
 
   const sortEventsByDateAndTime = (events) => {
     const currentDate = new Date();
@@ -243,8 +259,6 @@ const EventList = () => {
     );
   }
 
-  const filteredEvents = filterEventsByDate(events);
-
   const carouselImages = [
     womens1,
     womens2,
@@ -266,17 +280,18 @@ const EventList = () => {
       >
         {/* Sports Filter */}
         <div className="overflow-x-auto whitespace-nowrap flex space-x-4">
-          {availableSports.map((sport) => (
+          {SPORTS_LIST.map((sport) => (
             <button
-              key={sport}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                selectedSport === sport
-                  ? "bg-teal-600 text-white"
-                  : "bg-gray-200 text-gray-800"
-              }`}
-              onClick={() => setSelectedSport(sport)}
+              key={sport.id}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors 
+                ${
+                  selectedSport === sport.id
+                    ? "bg-teal-600 text-white"
+                    : "bg-gray-200 text-gray-800 hover:bg-gray-300"
+                }`}
+              onClick={() => setSelectedSport(sport.id)}
             >
-              {sport.charAt(0).toUpperCase() + sport.slice(1)}
+              {sport.name}
             </button>
           ))}
         </div>

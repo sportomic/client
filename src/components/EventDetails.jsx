@@ -199,8 +199,8 @@ const EventDetails = () => {
 
       // Append form to body and submit
       document.body.appendChild(form);
-      console.log("Submitting PayU payment form");
       form.submit();
+      console.log("Submitting PayU form with data:", payuParams);
     } catch (error) {
       console.error("PayU payment initialization error:", error.message);
       alert(`Payment initialization failed: ${error.message}`);

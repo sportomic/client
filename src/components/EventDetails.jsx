@@ -16,20 +16,46 @@ const EventDetails = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [paymentDetails, setPaymentDetails] = useState(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  const [txnId, setTxnId] = useState(null); // Use txnId for PayU transaction tracking
+  const [txnId, setTxnId] = useState(null); // Use txnId instead of orderId for PayU
 
-  // Check if we're returning from PayU redirect
+  // Check for PayU redirect status
   useEffect(() => {
-    const storedTxnId = localStorage.getItem("pendingTxnId");
-    if (storedTxnId) {
-      console.log(
-        "Returning from PayU redirect with stored txnId:",
-        storedTxnId
-      );
-      setTxnId(storedTxnId);
-      setIsProcessingPayment(true); // Show loader briefly while checking payment status
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentStatus = urlParams.get("payment");
+    if (paymentStatus === "success") {
+      console.log("PayU success redirect detected");
+      // Remove the processing state since webhook will handle the confirmation
+      setIsProcessingPayment(false);
+    } else if (paymentStatus === "failure") {
+      console.log("PayU failure redirect detected");
+      alert("Payment failed. Please try again.");
+      setIsProcessingPayment(false);
+      setTxnId(null);
     }
   }, []);
+
+  // Remove the polling effect since we'll rely on webhooks
+  useEffect(() => {
+    // Check if payment is being processed and we have participants data
+    if (isProcessingPayment && participants.length > 0 && name) {
+      const participant = participants.find(
+        (p) => p.paymentStatus === "success" && p.name === name
+      );
+      
+      if (participant) {
+        console.log("Payment confirmed via webhook:", participant);
+        setPaymentDetails({
+          participantName: name,
+          participantPhone: phone,
+          skillLevel,
+          paymentId: participant.paymentId,
+          quantity,
+        });
+        setShowSuccessModal(true);
+        setIsProcessingPayment(false);
+      }
+    }
+  }, [participants, name, phone, skillLevel, quantity, isProcessingPayment]);
 
   // Fetch event details
   useEffect(() => {
@@ -65,7 +91,7 @@ const EventDetails = () => {
         "Participants fetched successfully:",
         data.successfulPayments
       );
-      setParticipants(data.successfulPayments || []);
+      setParticipants(data.successfulPayments);
     } catch (error) {
       console.error("Error fetching participants:", error.message);
       setError(error.message);
@@ -76,72 +102,50 @@ const EventDetails = () => {
     if (eventId) fetchParticipants();
   }, [eventId]);
 
-  // Check payment status after redirect
+  // Poll for successful payments
   useEffect(() => {
-    let timeout;
+    let interval;
     if (txnId && isProcessingPayment) {
-      console.log(`Checking payment status for txnId: ${txnId}`);
-      const checkPaymentStatus = async () => {
+      console.log(`Starting polling for txnId: ${txnId}`);
+      interval = setInterval(async () => {
         await fetchParticipants();
         const participant = participants.find(
-          (p) => p.paymentStatus === "success" && p.orderId === txnId
+          (p) =>
+            p.paymentStatus === "success" &&
+            p.name === name &&
+            p.orderId === txnId // Check PayU txnid (stored as orderId)
         );
         if (participant) {
-          console.log("Payment confirmed:", participant);
+          console.log("Payment confirmed via polling:", participant);
           setPaymentDetails({
-            participantName: participant.name,
-            participantPhone: participant.phone,
-            skillLevel: participant.skillLevel,
+            participantName: name,
+            participantPhone: phone,
+            skillLevel,
             paymentId: participant.paymentId, // PayU mihpayid
-            quantity: participant.quantity,
+            quantity,
           });
           setShowSuccessModal(true);
           setIsProcessingPayment(false);
-          setTxnId(null);
-          localStorage.removeItem("pendingTxnId"); // Clear stored txnId
+          clearInterval(interval);
         }
-      };
-
-      // Initial check
-      checkPaymentStatus();
-
-      // Set a timeout to hide the loader if payment isn't confirmed quickly
-      timeout = setTimeout(() => {
-        if (isProcessingPayment) {
-          console.log("Payment confirmation taking too long, hiding loader");
-          setIsProcessingPayment(false);
-          alert("Payment status pending. Please check back later.");
-        }
-      }, 10000); // Hide loader after 10 seconds
+      }, 3000);
     }
-
     return () => {
-      if (timeout) clearTimeout(timeout);
-    };
-  }, [txnId, isProcessingPayment, participants]);
-
-  // Handle webhook updates
-  useEffect(() => {
-    if (txnId && participants.length > 0 && isProcessingPayment) {
-      const participant = participants.find(
-        (p) => p.paymentStatus === "success" && p.orderId === txnId
-      );
-      if (participant) {
-        console.log("Payment confirmed via webhook:", participant);
-        setPaymentDetails({
-          participantName: participant.name,
-          participantPhone: participant.phone,
-          skillLevel: participant.skillLevel,
-          paymentId: participant.paymentId,
-          quantity: participant.quantity,
-        });
-        setShowSuccessModal(true);
-        setIsProcessingPayment(false);
-        setTxnId(null);
-        localStorage.removeItem("pendingTxnId"); // Clear stored txnId
+      if (interval) {
+        console.log("Stopping polling");
+        clearInterval(interval);
       }
-    }
-  }, [participants, txnId, isProcessingPayment]);
+    };
+  }, [
+    txnId,
+    isProcessingPayment,
+    participants,
+    name,
+    phone,
+    skillLevel,
+    quantity,
+    eventId,
+  ]);
 
   const totalAmount = event ? event.price * quantity : 0;
 
@@ -184,8 +188,7 @@ const EventDetails = () => {
       const paymentData = await response.json();
       console.log("PayU payment data received:", paymentData);
 
-      // Store txnId in localStorage before redirecting to PayU
-      localStorage.setItem("pendingTxnId", paymentData.txnid);
+      // Store PayU txnid for polling
       setTxnId(paymentData.txnid);
 
       // Create PayU payment form
@@ -227,7 +230,6 @@ const EventDetails = () => {
       alert(`Payment initialization failed: ${error.message}`);
       setIsProcessingPayment(false);
       setTxnId(null);
-      localStorage.removeItem("pendingTxnId");
     }
   };
 

@@ -16,19 +16,17 @@ const EventDetails = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [paymentDetails, setPaymentDetails] = useState(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  const [txnId, setTxnId] = useState(null);
-  const [pollingCount, setPollingCount] = useState(0);
-  const [pollingMessage, setPollingMessage] = useState("Processing payment...");
+  const [txnId, setTxnId] = useState(null); // Use txnId instead of orderId for PayU
 
   // Check for PayU redirect status
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const paymentStatus = urlParams.get("payment");
-    if (paymentStatus === "success") {
-      console.log("PayU success redirect detected");
-      setIsProcessingPayment(true);
-      setPollingCount(0);
-      setPollingMessage("Verifying payment status...");
+    const receivedTxnId = urlParams.get("txnid");
+    if (paymentStatus === "success" && receivedTxnId) {
+      console.log("PayU success redirect detected with txnId:", receivedTxnId);
+      setTxnId(receivedTxnId); // Set txnId from URL param
+      setIsProcessingPayment(true); // Trigger polling
     } else if (paymentStatus === "failure") {
       console.log("PayU failure redirect detected");
       alert("Payment failed. Please try again.");
@@ -71,12 +69,10 @@ const EventDetails = () => {
         "Participants fetched successfully:",
         data.successfulPayments
       );
-      setParticipants(data.successfulPayments);
-      return data.successfulPayments;
+      setParticipants(data.successfulPayments || []);
     } catch (error) {
       console.error("Error fetching participants:", error.message);
       setError(error.message);
-      return [];
     }
   };
 
@@ -87,61 +83,58 @@ const EventDetails = () => {
   // Poll for successful payments
   useEffect(() => {
     let interval;
-    const maxPollingAttempts = 10;
+    if (txnId && isProcessingPayment) {
+      console.log(`Starting polling for txnId: ${txnId}`);
+      interval = setInterval(async () => {
+        await fetchParticipants();
+        const participant = participants.find(
+          (p) => p.paymentStatus === "success" && p.orderId === txnId // Match exact txnId
+        );
+        if (participant) {
+          console.log("Payment confirmed via polling:", participant);
+          setPaymentDetails({
+            participantName: participant.name,
+            participantPhone: participant.phone,
+            skillLevel: participant.skillLevel,
+            paymentId: participant.paymentId, // PayU mihpayid
+            quantity: participant.quantity,
+          });
+          setShowSuccessModal(true);
+          setIsProcessingPayment(false);
+          setTxnId(null); // Clear txnId after success
+          clearInterval(interval);
+        }
+      }, 3000);
+    }
+    return () => {
+      if (interval) {
+        console.log("Stopping polling");
+        clearInterval(interval);
+      }
+    };
+  }, [txnId, isProcessingPayment, participants]);
 
-    const checkPaymentStatus = async () => {
-      if (!isProcessingPayment || !txnId || !name) return;
-
-      const currentParticipants = await fetchParticipants();
-      setPollingCount((prev) => prev + 1);
-
-      const participant = currentParticipants.find(
-        (p) =>
-          p.paymentStatus === "success" &&
-          p.name === name &&
-          (p.orderId === txnId || p.paymentId === txnId)
+  // Handle webhook-based payment success
+  useEffect(() => {
+    if (txnId && participants.length > 0 && isProcessingPayment) {
+      const participant = participants.find(
+        (p) => p.paymentStatus === "success" && p.orderId === txnId
       );
-
       if (participant) {
-        console.log("Payment confirmed via polling:", participant);
+        console.log("Payment confirmed via webhook:", participant);
         setPaymentDetails({
-          participantName: name,
-          participantPhone: phone,
-          skillLevel,
+          participantName: participant.name,
+          participantPhone: participant.phone,
+          skillLevel: participant.skillLevel,
           paymentId: participant.paymentId,
-          quantity,
+          quantity: participant.quantity,
         });
         setShowSuccessModal(true);
         setIsProcessingPayment(false);
-        clearInterval(interval);
-      } else if (pollingCount >= maxPollingAttempts) {
-        console.log("Max polling attempts reached without confirmation");
-        setIsProcessingPayment(false);
-        clearInterval(interval);
-        setPollingMessage(
-          "Payment verification timed out. Please check your email or contact support."
-        );
+        setTxnId(null); // Clear txnId after success
       }
-    };
-
-    if (isProcessingPayment && txnId && name) {
-      console.log(`Starting polling for txnId: ${txnId}`);
-      interval = setInterval(checkPaymentStatus, 3000);
-      checkPaymentStatus();
     }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [
-    isProcessingPayment,
-    txnId,
-    name,
-    phone,
-    skillLevel,
-    quantity,
-    pollingCount,
-  ]);
+  }, [participants, txnId, isProcessingPayment]);
 
   const totalAmount = event ? event.price * quantity : 0;
 
@@ -166,8 +159,6 @@ const EventDetails = () => {
     }
 
     setIsProcessingPayment(true);
-    setPollingCount(0);
-    setPollingMessage("Processing payment...");
 
     try {
       console.log("Sending booking request to server...");
@@ -186,12 +177,15 @@ const EventDetails = () => {
       const paymentData = await response.json();
       console.log("PayU payment data received:", paymentData);
 
+      // Store PayU txnid for polling
       setTxnId(paymentData.txnid);
 
+      // Create PayU payment form
       const form = document.createElement("form");
       form.method = "POST";
       form.action = paymentData.payuUrl;
 
+      // Add PayU required fields
       const payuParams = {
         key: paymentData.key,
         txnid: paymentData.txnid,
@@ -203,9 +197,9 @@ const EventDetails = () => {
         surl: paymentData.surl,
         furl: paymentData.furl,
         hash: paymentData.hash,
-        udf1: paymentData.udf1,
-        udf2: paymentData.udf2,
-        udf3: paymentData.udf3,
+        udf1: paymentData.udf1, // skillLevel
+        udf2: paymentData.udf2, // quantity
+        udf3: paymentData.udf3, // eventId
       };
 
       Object.keys(payuParams).forEach((key) => {
@@ -216,6 +210,7 @@ const EventDetails = () => {
         form.appendChild(input);
       });
 
+      // Append form to body and submit
       document.body.appendChild(form);
       form.submit();
       console.log("Submitting PayU form with data:", payuParams);
@@ -226,12 +221,6 @@ const EventDetails = () => {
       setTxnId(null);
     }
   };
-
-  const capitalizeText = (text) =>
-    text
-      .split(" ")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join(" ");
 
   if (loading) {
     return (
@@ -251,6 +240,12 @@ const EventDetails = () => {
 
   if (!event) return null;
 
+  const capitalizeText = (text) =>
+    text
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
+
   const isBookButtonDisabled =
     event.currentParticipants >= event.participantsLimit || isProcessingPayment;
 
@@ -260,10 +255,10 @@ const EventDetails = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg text-center">
             <p className="text-lg font-semibold text-gray-800">
-              {pollingMessage}
+              Processing payment...
             </p>
             <p className="text-sm text-gray-600 mt-2">
-              {pollingCount > 0 && `Attempt ${pollingCount} of 10`}
+              Please wait or check back later for confirmation.
             </p>
           </div>
         </div>

@@ -16,20 +16,14 @@ const EventDetails = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [paymentDetails, setPaymentDetails] = useState(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  const [txnId, setTxnId] = useState(null);
+  const [txnId, setTxnId] = useState(null); // Use txnId instead of orderId for PayU
 
   // Check for PayU redirect status
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const paymentStatus = urlParams.get("payment");
-    const redirectedTxnId = urlParams.get("txnid"); // Assuming PayU includes txnid in redirect URL
-
-    if (paymentStatus === "success" && redirectedTxnId) {
-      console.log(
-        "PayU success redirect detected with txnId:",
-        redirectedTxnId
-      );
-      setTxnId(redirectedTxnId); // Set txnId from redirect
+    if (paymentStatus === "success") {
+      console.log("PayU success redirect detected");
       setIsProcessingPayment(true); // Trigger polling
     } else if (paymentStatus === "failure") {
       console.log("PayU failure redirect detected");
@@ -38,6 +32,27 @@ const EventDetails = () => {
       setTxnId(null);
     }
   }, []);
+
+  // Fetch event details
+  useEffect(() => {
+    const fetchEventDetails = async () => {
+      console.log(`Fetching event details for eventId: ${eventId}`);
+      try {
+        const response = await fetch(`${apiUrl}/events/${eventId}`);
+        if (!response.ok) throw new Error("Failed to fetch event details");
+        const data = await response.json();
+        console.log("Event details fetched successfully:", data);
+        setEvent(data);
+      } catch (error) {
+        console.error("Error fetching event details:", error.message);
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (eventId) fetchEventDetails();
+  }, [eventId]);
 
   // Fetch participants
   const fetchParticipants = async () => {
@@ -63,11 +78,9 @@ const EventDetails = () => {
     if (eventId) fetchParticipants();
   }, [eventId]);
 
-  // Poll for successful payments with timeout
+  // Poll for successful payments
   useEffect(() => {
     let interval;
-    let timeout;
-
     if (txnId && isProcessingPayment) {
       console.log(`Starting polling for txnId: ${txnId}`);
       interval = setInterval(async () => {
@@ -89,30 +102,14 @@ const EventDetails = () => {
           });
           setShowSuccessModal(true);
           setIsProcessingPayment(false);
-          setTxnId(null); // Reset txnId
           clearInterval(interval);
         }
       }, 3000);
-
-      // Stop polling after 30 seconds if no confirmation
-      timeout = setTimeout(() => {
-        console.log("Polling timeout reached, stopping polling");
-        clearInterval(interval);
-        setIsProcessingPayment(false);
-        setTxnId(null);
-        alert(
-          "Payment status could not be verified. Please check your payment status later."
-        );
-      }, 30000);
     }
-
     return () => {
       if (interval) {
         console.log("Stopping polling");
         clearInterval(interval);
-      }
-      if (timeout) {
-        clearTimeout(timeout);
       }
     };
   }, [
@@ -125,6 +122,29 @@ const EventDetails = () => {
     quantity,
     eventId,
   ]);
+
+  // Add this new effect to handle webhook-based payment success
+  useEffect(() => {
+    // Check if a new participant with matching name was added via webhook
+    if (name && participants.length > 0 && isProcessingPayment) {
+      const participant = participants.find(
+        (p) => p.paymentStatus === "success" && p.name === name
+      );
+      
+      if (participant) {
+        console.log("Payment confirmed via webhook:", participant);
+        setPaymentDetails({
+          participantName: name,
+          participantPhone: phone,
+          skillLevel,
+          paymentId: participant.paymentId,
+          quantity,
+        });
+        setShowSuccessModal(true);
+        setIsProcessingPayment(false);
+      }
+    }
+  }, [participants, name, phone, skillLevel, quantity, isProcessingPayment]);
 
   const totalAmount = event ? event.price * quantity : 0;
 
@@ -211,6 +231,7 @@ const EventDetails = () => {
       setTxnId(null);
     }
   };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">

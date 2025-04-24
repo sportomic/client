@@ -16,22 +16,18 @@ const EventDetails = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [paymentDetails, setPaymentDetails] = useState(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  const [txnId, setTxnId] = useState(null); // Use txnId instead of orderId for PayU
+  const [txnId, setTxnId] = useState(null); // Use txnId for PayU transaction tracking
 
-  // Check for PayU redirect status
+  // Check if we're returning from PayU redirect
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const paymentStatus = urlParams.get("payment");
-    const receivedTxnId = urlParams.get("txnid");
-    if (paymentStatus === "success" && receivedTxnId) {
-      console.log("PayU success redirect detected with txnId:", receivedTxnId);
-      setTxnId(receivedTxnId); // Set txnId from URL param
-      setIsProcessingPayment(true); // Trigger polling
-    } else if (paymentStatus === "failure") {
-      console.log("PayU failure redirect detected");
-      alert("Payment failed. Please try again.");
-      setIsProcessingPayment(false);
-      setTxnId(null);
+    const storedTxnId = localStorage.getItem("pendingTxnId");
+    if (storedTxnId) {
+      console.log(
+        "Returning from PayU redirect with stored txnId:",
+        storedTxnId
+      );
+      setTxnId(storedTxnId);
+      setIsProcessingPayment(true); // Show loader briefly while checking payment status
     }
   }, []);
 
@@ -80,18 +76,18 @@ const EventDetails = () => {
     if (eventId) fetchParticipants();
   }, [eventId]);
 
-  // Poll for successful payments
+  // Check payment status after redirect
   useEffect(() => {
-    let interval;
+    let timeout;
     if (txnId && isProcessingPayment) {
-      console.log(`Starting polling for txnId: ${txnId}`);
-      interval = setInterval(async () => {
+      console.log(`Checking payment status for txnId: ${txnId}`);
+      const checkPaymentStatus = async () => {
         await fetchParticipants();
         const participant = participants.find(
-          (p) => p.paymentStatus === "success" && p.orderId === txnId // Match exact txnId
+          (p) => p.paymentStatus === "success" && p.orderId === txnId
         );
         if (participant) {
-          console.log("Payment confirmed via polling:", participant);
+          console.log("Payment confirmed:", participant);
           setPaymentDetails({
             participantName: participant.name,
             participantPhone: participant.phone,
@@ -101,20 +97,30 @@ const EventDetails = () => {
           });
           setShowSuccessModal(true);
           setIsProcessingPayment(false);
-          setTxnId(null); // Clear txnId after success
-          clearInterval(interval);
+          setTxnId(null);
+          localStorage.removeItem("pendingTxnId"); // Clear stored txnId
         }
-      }, 3000);
+      };
+
+      // Initial check
+      checkPaymentStatus();
+
+      // Set a timeout to hide the loader if payment isn't confirmed quickly
+      timeout = setTimeout(() => {
+        if (isProcessingPayment) {
+          console.log("Payment confirmation taking too long, hiding loader");
+          setIsProcessingPayment(false);
+          alert("Payment status pending. Please check back later.");
+        }
+      }, 10000); // Hide loader after 10 seconds
     }
+
     return () => {
-      if (interval) {
-        console.log("Stopping polling");
-        clearInterval(interval);
-      }
+      if (timeout) clearTimeout(timeout);
     };
   }, [txnId, isProcessingPayment, participants]);
 
-  // Handle webhook-based payment success
+  // Handle webhook updates
   useEffect(() => {
     if (txnId && participants.length > 0 && isProcessingPayment) {
       const participant = participants.find(
@@ -131,7 +137,8 @@ const EventDetails = () => {
         });
         setShowSuccessModal(true);
         setIsProcessingPayment(false);
-        setTxnId(null); // Clear txnId after success
+        setTxnId(null);
+        localStorage.removeItem("pendingTxnId"); // Clear stored txnId
       }
     }
   }, [participants, txnId, isProcessingPayment]);
@@ -177,7 +184,8 @@ const EventDetails = () => {
       const paymentData = await response.json();
       console.log("PayU payment data received:", paymentData);
 
-      // Store PayU txnid for polling
+      // Store txnId in localStorage before redirecting to PayU
+      localStorage.setItem("pendingTxnId", paymentData.txnid);
       setTxnId(paymentData.txnid);
 
       // Create PayU payment form
@@ -219,6 +227,7 @@ const EventDetails = () => {
       alert(`Payment initialization failed: ${error.message}`);
       setIsProcessingPayment(false);
       setTxnId(null);
+      localStorage.removeItem("pendingTxnId");
     }
   };
 

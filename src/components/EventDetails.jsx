@@ -16,14 +16,20 @@ const EventDetails = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [paymentDetails, setPaymentDetails] = useState(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  const [txnId, setTxnId] = useState(null); // Use txnId instead of orderId for PayU
+  const [txnId, setTxnId] = useState(null);
 
   // Check for PayU redirect status
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const paymentStatus = urlParams.get("payment");
-    if (paymentStatus === "success") {
-      console.log("PayU success redirect detected");
+    const redirectedTxnId = urlParams.get("txnid"); // Assuming PayU includes txnid in redirect URL
+
+    if (paymentStatus === "success" && redirectedTxnId) {
+      console.log(
+        "PayU success redirect detected with txnId:",
+        redirectedTxnId
+      );
+      setTxnId(redirectedTxnId); // Set txnId from redirect
       setIsProcessingPayment(true); // Trigger polling
     } else if (paymentStatus === "failure") {
       console.log("PayU failure redirect detected");
@@ -32,27 +38,6 @@ const EventDetails = () => {
       setTxnId(null);
     }
   }, []);
-
-  // Fetch event details
-  useEffect(() => {
-    const fetchEventDetails = async () => {
-      console.log(`Fetching event details for eventId: ${eventId}`);
-      try {
-        const response = await fetch(`${apiUrl}/events/${eventId}`);
-        if (!response.ok) throw new Error("Failed to fetch event details");
-        const data = await response.json();
-        console.log("Event details fetched successfully:", data);
-        setEvent(data);
-      } catch (error) {
-        console.error("Error fetching event details:", error.message);
-        setError(error.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (eventId) fetchEventDetails();
-  }, [eventId]);
 
   // Fetch participants
   const fetchParticipants = async () => {
@@ -78,9 +63,11 @@ const EventDetails = () => {
     if (eventId) fetchParticipants();
   }, [eventId]);
 
-  // Poll for successful payments
+  // Poll for successful payments with timeout
   useEffect(() => {
     let interval;
+    let timeout;
+
     if (txnId && isProcessingPayment) {
       console.log(`Starting polling for txnId: ${txnId}`);
       interval = setInterval(async () => {
@@ -102,14 +89,30 @@ const EventDetails = () => {
           });
           setShowSuccessModal(true);
           setIsProcessingPayment(false);
+          setTxnId(null); // Reset txnId
           clearInterval(interval);
         }
       }, 3000);
+
+      // Stop polling after 30 seconds if no confirmation
+      timeout = setTimeout(() => {
+        console.log("Polling timeout reached, stopping polling");
+        clearInterval(interval);
+        setIsProcessingPayment(false);
+        setTxnId(null);
+        alert(
+          "Payment status could not be verified. Please check your payment status later."
+        );
+      }, 30000);
     }
+
     return () => {
       if (interval) {
         console.log("Stopping polling");
         clearInterval(interval);
+      }
+      if (timeout) {
+        clearTimeout(timeout);
       }
     };
   }, [
@@ -208,7 +211,6 @@ const EventDetails = () => {
       setTxnId(null);
     }
   };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">

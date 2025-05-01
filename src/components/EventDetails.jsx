@@ -41,7 +41,7 @@ const EventDetails = () => {
       const participant = participants.find(
         (p) => p.paymentStatus === "success" && p.name === name
       );
-      
+
       if (participant) {
         console.log("Payment confirmed via webhook:", participant);
         setPaymentDetails({
@@ -265,11 +265,9 @@ const EventDetails = () => {
       {isProcessingPayment && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-teal-800 mx-auto mb-4"></div>
             <p className="text-lg font-semibold text-gray-800">
               Processing payment...
-            </p>
-            <p className="text-sm text-gray-600 mt-2">
-              Please wait or check back later for confirmation.
             </p>
           </div>
         </div>

@@ -144,7 +144,7 @@ const AboutUs = () => {
             initial="initial"
             whileInView="whileInView"
           >
-            {[900, 2250, 1000].map((value, index) => (
+            {[900, 2250, 1150].map((value, index) => (
               <motion.div key={index} variants={fadeInUp}>
                 <Counter end={value} />
                 <p className="text-xl text-gray-600 mt-4">

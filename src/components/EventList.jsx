@@ -11,6 +11,7 @@ import maskgroup3 from "../assets/images/mask-group-3.jpg";
 import womens1 from "../assets/images/womens1.png";
 import womens2 from "../assets/images/womens2.png";
 import Carousel from "./Carousel";
+import { SPORTS_LIST } from "../constants/sportsList";
 
 const EventSkeleton = () => {
   return (
@@ -74,34 +75,49 @@ const handleShare = async (event) => {
 };
 
 const EventList = () => {
-  const [events, setEvents] = useState([]);
-  const [availableSports, setAvailableSports] = useState([]);
+  const [allEvents, setAllEvents] = useState([]); // Store all events
+  const [filteredEvents, setFilteredEvents] = useState([]); // Store filtered events
   const [selectedSport, setSelectedSport] = useState("all");
   const [selectedDateFilter, setSelectedDateFilter] = useState("today");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+
+  // Fetch events only once
   useEffect(() => {
-    fetchEvents(selectedSport);
-  }, [selectedSport]);
+    const fetchAllEvents = async () => {
+      setIsLoading(true);
+      try {
+        const response = await axios.get(`${apiUrl}/events`);
+        setAllEvents(response.data.events);
+        setFilteredEvents(response.data.events);
+      } catch (error) {
+        console.error("Error fetching events:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const fetchEvents = async (sport) => {
-    setIsLoading(true);
-    try {
-      const response = await axios.get(`${apiUrl}/events?sport=${sport}`);
-      const { events: data, availableSports } = response.data;
+    fetchAllEvents();
+  }, []); // Empty dependency array - fetch only once
 
-      const sortedEvents = sortEventsByDateAndTime(data);
+  // Handle sport and date filtering
+  useEffect(() => {
+    let result = [...allEvents];
 
-      setEvents(sortedEvents);
-      setAvailableSports(["all", ...availableSports]);
-      setIsLoading(false);
-    } catch (error) {
-      console.error("Error fetching events:", error);
-      setError(error.message);
-      setIsLoading(false);
+    // Apply sport filter
+    if (selectedSport !== "all") {
+      result = result.filter(
+        (event) =>
+          event.sportsName.toLowerCase() === selectedSport.toLowerCase()
+      );
     }
-  };
+
+    // Apply date filter
+    result = filterEventsByDate(result);
+
+    setFilteredEvents(result);
+  }, [selectedSport, selectedDateFilter, allEvents]);
 
   const sortEventsByDateAndTime = (events) => {
     const currentDate = new Date();
@@ -243,8 +259,6 @@ const EventList = () => {
     );
   }
 
-  const filteredEvents = filterEventsByDate(events);
-
   const carouselImages = [
     //womens1,
     //womens2,
@@ -266,17 +280,18 @@ const EventList = () => {
       >
         {/* Sports Filter */}
         <div className="overflow-x-auto whitespace-nowrap flex space-x-4">
-          {availableSports.map((sport) => (
+          {SPORTS_LIST.map((sport) => (
             <button
-              key={sport}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                selectedSport === sport
-                  ? "bg-teal-600 text-white"
-                  : "bg-gray-200 text-gray-800"
-              }`}
-              onClick={() => setSelectedSport(sport)}
+              key={sport.id}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors 
+                ${
+                  selectedSport === sport.id
+                    ? "bg-teal-600 text-white"
+                    : "bg-gray-200 text-gray-800 hover:bg-gray-300"
+                }`}
+              onClick={() => setSelectedSport(sport.id)}
             >
-              {sport.charAt(0).toUpperCase() + sport.slice(1)}
+              {sport.name}
             </button>
           ))}
         </div>
@@ -307,78 +322,106 @@ const EventList = () => {
 
       {/* Events Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredEvents.map((event) => (
-          <div
-            key={event._id}
-            className="max-w-sm w-full mx-auto bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300"
-          >
-            <div className="relative">
-              <img
-                src={event.venueImage || temp}
-                alt={event.name}
-                className="w-full h-48 object-cover"
-              />
-              {/* Share Button */}
-              <button
-                onClick={() => handleShare(event)}
-                className="absolute top-2 right-2 p-2 bg-white rounded-full shadow-md hover:bg-gray-100 transition-colors"
-                aria-label="Share event"
+        {filteredEvents.length === 0 ? (
+          <div className="col-span-full flex flex-col items-center justify-center py-16">
+            <div className="text-center">
+              <svg
+                className="mx-auto h-12 w-12 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                aria-hidden="true"
               >
-                <Share2 className="w-5 h-5 text-gray-600" />
-              </button>
-              <div
-                className={`absolute bottom-4 right-4 px-4 py-1 rounded-full text-sm font-medium ${
-                  event.slotsLeft > 0
-                    ? "bg-red-500 text-white"
-                    : "bg-gray-500 text-gray-100"
-                }`}
-              >
-                {event.slotsLeft > 0
-                  ? `${event.slotsLeft} Slot${
-                      event.slotsLeft !== 1 ? "s" : ""
-                    } Left!`
-                  : "Sold Out"}
-              </div>
-            </div>
-
-            <div className="p-5">
-              <h3 className="text-2xl font-bold text-gray-800 mb-2">
-                {event.name}
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <h3 className="mt-4 text-lg font-semibold text-gray-900">
+                No Games Found
               </h3>
-              <div className="flex items-center gap-2 mb-4">
-                <MapPin className="w-5 h-5 text-blue-600" />
-                <span className="text-blue-600">{event.location}</span>
-                <span className="text-gray-600">{event.venueName}</span>
-              </div>
-              <div className="flex items-center gap-2 mb-3">
-                <Calendar className="w-5 h-5 text-gray-600" />
-                <span className="text-gray-700">
-                  {new Date(event.date).toLocaleDateString("en-US", {
-                    weekday: "long",
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                  })}
-                </span>
-              </div>
-              <div>{event.slot}</div>
-              <div className="flex items-center justify-between mt-4">
-                <div className="flex items-baseline">
-                  <span className="text-lg font-bold text-gray-900">
-                    INR {event.price || "99.00"}
-                  </span>
-                  <span className="text-gray-600 ml-1">/ PERSON</span>
-                </div>
-                <button
-                  onClick={() => handleBookNow(event._id)}
-                  className="px-8 py-2 rounded-lg font-medium transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-teal-600 hover:bg-teal-700 text-white focus:ring-teal-500"
-                >
-                  Join Now
-                </button>
-              </div>
+              <p className="mt-2 text-sm text-gray-600">
+                There are no games available for your selected filters. Check
+                back later or adjust your filters.
+              </p>
             </div>
           </div>
-        ))}
+        ) : (
+          filteredEvents.map((event) => (
+            <div
+              key={event._id}
+              className="max-w-sm w-full mx-auto bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300"
+            >
+              <div className="relative">
+                <img
+                  src={event.venueImage || temp}
+                  alt={event.name}
+                  className="w-full h-48 object-cover"
+                />
+                {/* Share Button */}
+                <button
+                  onClick={() => handleShare(event)}
+                  className="absolute top-2 right-2 p-2 bg-white rounded-full shadow-md hover:bg-gray-100 transition-colors"
+                  aria-label="Share event"
+                >
+                  <Share2 className="w-5 h-5 text-gray-600" />
+                </button>
+                <div
+                  className={`absolute bottom-4 right-4 px-4 py-1 rounded-full text-sm font-medium ${
+                    event.slotsLeft > 0
+                      ? "bg-red-500 text-white"
+                      : "bg-gray-500 text-gray-100"
+                  }`}
+                >
+                  {event.slotsLeft > 0
+                    ? `${event.slotsLeft} Slot${
+                        event.slotsLeft !== 1 ? "s" : ""
+                      } Left!`
+                    : "Sold Out"}
+                </div>
+              </div>
+
+              <div className="p-5">
+                <h3 className="text-2xl font-bold text-gray-800 mb-2">
+                  {event.name}
+                </h3>
+                <div className="flex items-center gap-2 mb-4">
+                  <MapPin className="w-5 h-5 text-blue-600" />
+                  <span className="text-blue-600">{event.location}</span>
+                  <span className="text-gray-600">{event.venueName}</span>
+                </div>
+                <div className="flex items-center gap-2 mb-3">
+                  <Calendar className="w-5 h-5 text-gray-600" />
+                  <span className="text-gray-700">
+                    {new Date(event.date).toLocaleDateString("en-US", {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </span>
+                </div>
+                <div>{event.slot}</div>
+                <div className="flex items-center justify-between mt-4">
+                  <div className="flex items-baseline">
+                    <span className="text-lg font-bold text-gray-900">
+                      INR {event.price || "99.00"}
+                    </span>
+                    <span className="text-gray-600 ml-1">/ PERSON</span>
+                  </div>
+                  <button
+                    onClick={() => handleBookNow(event._id)}
+                    className="px-8 py-2 rounded-lg font-medium transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-teal-600 hover:bg-teal-700 text-white focus:ring-teal-500"
+                  >
+                    Join Now
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

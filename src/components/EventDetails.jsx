@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import PaymentSuccessModal from "./PaymentSuccessModal";
 import { apiUrl } from "../contant";
 import { Calendar, MapPin, Clock, Info, Trophy } from "lucide-react";
-import { useRazorpay } from "react-razorpay";
 
 const EventDetails = () => {
   const eventId = window.location.pathname.split("/").pop();
@@ -17,46 +16,46 @@ const EventDetails = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [paymentDetails, setPaymentDetails] = useState(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  const [orderId, setOrderId] = useState(null);
-  const [isRazorpayReady, setIsRazorpayReady] = useState(false); // New state to track Razorpay readiness
+  const [txnId, setTxnId] = useState(null); // Use txnId instead of orderId for PayU
 
-  const {
-    error: razorpayError,
-    isLoading: razorpayLoading,
-    Razorpay,
-  } = useRazorpay();
-
-  // Monitor Razorpay loading state and ensure readiness
+  // Check for PayU redirect status
   useEffect(() => {
-    console.log(
-      "Razorpay Loading State:",
-      razorpayLoading,
-      "Error:",
-      razorpayError
-    );
-    if (!razorpayLoading && !razorpayError && Razorpay) {
-      console.log("Razorpay SDK is ready");
-      setIsRazorpayReady(true);
-    } else if (razorpayError) {
-      console.error("Razorpay failed to load:", razorpayError);
-      setIsRazorpayReady(false);
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentStatus = urlParams.get("payment");
+    if (paymentStatus === "success") {
+      console.log("PayU success redirect detected");
+      // Remove the processing state since webhook will handle the confirmation
+      setIsProcessingPayment(false);
+    } else if (paymentStatus === "failure") {
+      console.log("PayU failure redirect detected");
+      alert("Payment failed. Please try again.");
+      setIsProcessingPayment(false);
+      setTxnId(null);
     }
-  }, [razorpayLoading, razorpayError, Razorpay]);
+  }, []);
 
-  // Fallback to ensure Razorpay readiness after a timeout (e.g., network delay)
+  // Remove the polling effect since we'll rely on webhooks
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      if (razorpayLoading && !isRazorpayReady) {
-        console.warn(
-          "Razorpay loading took too long, assuming ready if no error"
-        );
-        if (!razorpayError && Razorpay) {
-          setIsRazorpayReady(true);
-        }
+    // Check if payment is being processed and we have participants data
+    if (isProcessingPayment && participants.length > 0 && name) {
+      const participant = participants.find(
+        (p) => p.paymentStatus === "success" && p.name === name
+      );
+
+      if (participant) {
+        console.log("Payment confirmed via webhook:", participant);
+        setPaymentDetails({
+          participantName: name,
+          participantPhone: phone,
+          skillLevel,
+          paymentId: participant.paymentId,
+          quantity,
+        });
+        setShowSuccessModal(true);
+        setIsProcessingPayment(false);
       }
-    }, 5000); // 5-second fallback
-    return () => clearTimeout(timeout);
-  }, [razorpayLoading, razorpayError, Razorpay]);
+    }
+  }, [participants, name, phone, skillLevel, quantity, isProcessingPayment]);
 
   // Fetch event details
   useEffect(() => {
@@ -106,15 +105,15 @@ const EventDetails = () => {
   // Poll for successful payments
   useEffect(() => {
     let interval;
-    if (orderId && isProcessingPayment) {
-      console.log(`Starting polling for orderId: ${orderId}`);
+    if (txnId && isProcessingPayment) {
+      console.log(`Starting polling for txnId: ${txnId}`);
       interval = setInterval(async () => {
         await fetchParticipants();
         const participant = participants.find(
           (p) =>
             p.paymentStatus === "success" &&
             p.name === name &&
-            p.orderId === orderId
+            p.orderId === txnId // Check PayU txnid (stored as orderId)
         );
         if (participant) {
           console.log("Payment confirmed via polling:", participant);
@@ -122,7 +121,7 @@ const EventDetails = () => {
             participantName: name,
             participantPhone: phone,
             skillLevel,
-            paymentId: participant.paymentId,
+            paymentId: participant.paymentId, // PayU mihpayid
             quantity,
           });
           setShowSuccessModal(true);
@@ -138,7 +137,7 @@ const EventDetails = () => {
       }
     };
   }, [
-    orderId,
+    txnId,
     isProcessingPayment,
     participants,
     name,
@@ -151,7 +150,7 @@ const EventDetails = () => {
   const totalAmount = event ? event.price * quantity : 0;
 
   const handlePayment = async () => {
-    console.log("Initiating payment process...");
+    console.log("Initiating PayU payment process...");
     if (!/^\d{10}$/.test(phone)) {
       console.warn("Invalid phone number entered:", phone);
       alert("Please enter a valid 10-digit phone number");
@@ -186,84 +185,51 @@ const EventDetails = () => {
         throw new Error(errorData.error || "Booking failed");
       }
 
-      const order = await response.json();
-      console.log("Order created successfully:", order);
-      setOrderId(order.orderId);
+      const paymentData = await response.json();
+      console.log("PayU payment data received:", paymentData);
 
-      const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-        amount: totalAmount * 100,
-        currency: "INR",
-        name: order.eventName,
-        description: "Event Booking",
-        order_id: order.orderId,
-        prefill: { name, contact: phone },
-        method: {
-          card: true,
-          netbanking: true,
-          upi: true,
-          wallet: true,
-          emi: true,
-          paylater: true,
-        },
-        config: {
-          display: {
-            blocks: {
-              banks: {
-                name: "Payment Methods",
-                instruments: [
-                  { method: "upi" },
-                  { method: "card" },
-                  { method: "netbanking" },
-                  { method: "wallet" },
-                ],
-              },
-            },
-            sequence: ["block.banks"],
-            preferences: { show_default_blocks: true },
-          },
-        },
-        handler: async (response) => {
-          console.log("Payment successful (client-side), response:", response);
-          setPaymentDetails({
-            participantName: name,
-            participantPhone: phone,
-            skillLevel,
-            paymentId: response.razorpay_payment_id,
-            quantity,
-          });
-          setShowSuccessModal(true);
-          fetchParticipants();
-          setIsProcessingPayment(false);
-          alert("Payment completed successfully!");
-        },
-        modal: {
-          ondismiss: () => {
-            console.log("Payment modal dismissed by user");
-            alert("Payment cancelled by user");
-            setIsProcessingPayment(false);
-            setOrderId(null);
-          },
-        },
-        theme: { color: "#14B8A6" },
+      // Store PayU txnid for polling
+      setTxnId(paymentData.txnid);
+
+      // Create PayU payment form
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = paymentData.payuUrl;
+
+      // Add PayU required fields
+      const payuParams = {
+        key: paymentData.key,
+        txnid: paymentData.txnid,
+        amount: paymentData.amount,
+        productinfo: paymentData.productinfo,
+        firstname: paymentData.firstname,
+        email: paymentData.email,
+        phone: paymentData.phone,
+        surl: paymentData.surl,
+        furl: paymentData.furl,
+        hash: paymentData.hash,
+        udf1: paymentData.udf1, // skillLevel
+        udf2: paymentData.udf2, // quantity
+        udf3: paymentData.udf3, // eventId
       };
 
-      console.log("Opening Razorpay checkout with options:", options);
-      const rzp = new Razorpay(options);
-
-      rzp.on("payment.failed", (response) => {
-        console.error("Payment failed:", response.error);
-        alert(`Payment Failed: ${response.error.description}`);
-        setIsProcessingPayment(false);
-        setOrderId(null);
+      Object.keys(payuParams).forEach((key) => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = key;
+        input.value = payuParams[key];
+        form.appendChild(input);
       });
 
-      rzp.open();
+      // Append form to body and submit
+      document.body.appendChild(form);
+      form.submit();
+      console.log("Submitting PayU form with data:", payuParams);
     } catch (error) {
-      console.error("Payment Initialization Error:", error.message);
-      alert(`Payment Initialization Failed: ${error.message}`);
+      console.error("PayU payment initialization error:", error.message);
+      alert(`Payment initialization failed: ${error.message}`);
       setIsProcessingPayment(false);
-      setOrderId(null);
+      setTxnId(null);
     }
   };
 
@@ -292,21 +258,16 @@ const EventDetails = () => {
       .join(" ");
 
   const isBookButtonDisabled =
-    event.currentParticipants >= event.participantsLimit ||
-    isProcessingPayment ||
-    !isRazorpayReady || // Use custom readiness state instead of razorpayLoading
-    !!razorpayError;
+    event.currentParticipants >= event.participantsLimit || isProcessingPayment;
 
   return (
     <div className="min-h-screen bg-gray-50 mt-20 relative">
       {isProcessingPayment && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-teal-800 mx-auto mb-4"></div>
             <p className="text-lg font-semibold text-gray-800">
               Processing payment...
-            </p>
-            <p className="text-sm text-gray-600 mt-2">
-              Please wait or check back later for confirmation.
             </p>
           </div>
         </div>
@@ -501,21 +462,13 @@ const EventDetails = () => {
                 }`}
                 disabled={isBookButtonDisabled}
               >
-                {!isRazorpayReady
-                  ? "Loading Payment..."
-                  : isProcessingPayment
+                {isProcessingPayment
                   ? "Processing..."
                   : `Book ${quantity} Slot${
                       quantity > 1 ? "s" : ""
                     } · ₹${totalAmount}`}
               </button>
             </div>
-            {razorpayError && (
-              <div className="mt-4 text-red-600">
-                Error loading Razorpay:{" "}
-                {razorpayError.message || "Unknown error"}
-              </div>
-            )}
           </div>
         </div>
         {participants.length > 0 && (

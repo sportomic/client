@@ -50,7 +50,7 @@ const HeaderAdmin = () => {
   const navLinks = [
     { path: "/admin", label: "Manage Event" },
     { path: "/add-event", label: "Add Event" },
-    { path: "/download", label: "Download Report" },
+    { path: "/download", label: "Event Reports" },
     {
       path: "/inquiries",
       label: (

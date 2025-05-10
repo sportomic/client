@@ -13,6 +13,7 @@ import { toast, ToastContainer, Bounce } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { apiUrl } from "../contant";
 import { useAdmin } from "../contexts/AdminContext"; // Import useAdmin
+import EventsReports from "../components/EventReports";
 
 const AddEvent = () => {
   const [file, setFile] = useState(null);

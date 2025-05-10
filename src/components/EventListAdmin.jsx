@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import EventCard from "./EventCard";
 import axios from "axios";
 import { apiUrl } from "../contant";
+
 // Search Box Component
 const EventSearchBox = ({ onSearch }) => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -13,7 +14,7 @@ const EventSearchBox = ({ onSearch }) => {
   };
 
   return (
-    <div className="relative w-full mb-4">
+    <div className="relative w-full mb-6">
       <input
         type="text"
         placeholder="Search Event By ID or Name"
@@ -42,6 +43,91 @@ const EventSearchBox = ({ onSearch }) => {
           />
         </svg>
       </button>
+    </div>
+  );
+};
+
+// Pagination Component
+const PaginationControls = ({ pagination, onPageChange, onLimitChange }) => {
+  const { currentPage, totalPages, hasNextPage, hasPrevPage, limit } =
+    pagination;
+
+  const handlePageClick = (page) => {
+    if (page >= 1 && page <= totalPages) {
+      onPageChange(page);
+    }
+  };
+
+  // Calculate the range of page numbers to display (max 5)
+  const getPageRange = () => {
+    const maxPagesToShow = 5;
+    const halfRange = Math.floor(maxPagesToShow / 2);
+    let start = Math.max(1, currentPage - halfRange);
+    let end = Math.min(totalPages, start + maxPagesToShow - 1);
+
+    // Adjust start if end is at the totalPages
+    if (end - start < maxPagesToShow - 1) {
+      start = Math.max(1, end - maxPagesToShow + 1);
+    }
+
+    return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+  };
+
+  return (
+    <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6">
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-gray-600">Events per page:</span>
+        <select
+          className="p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-teal-500 text-sm"
+          value={limit}
+          onChange={(e) => onLimitChange(parseInt(e.target.value))}
+        >
+          {[5, 10, 20].map((value) => (
+            <option key={value} value={value}>
+              {value}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          className={`px-3 py-1 rounded-md text-sm font-medium ${
+            hasPrevPage
+              ? "bg-teal-600 text-white hover:bg-teal-700"
+              : "bg-gray-200 text-gray-500 cursor-not-allowed"
+          }`}
+          onClick={() => handlePageClick(currentPage - 1)}
+          disabled={!hasPrevPage}
+        >
+          Previous
+        </button>
+        <div className="flex gap-1">
+          {getPageRange().map((page) => (
+            <button
+              key={page}
+              className={`px-3 py-1 rounded-md text-sm font-medium ${
+                page === currentPage
+                  ? "bg-teal-600 text-white"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+              onClick={() => handlePageClick(page)}
+            >
+              {page}
+            </button>
+          ))}
+        </div>
+        <button
+          className={`px-3 py-1 rounded-md text-sm font-medium ${
+            hasNextPage
+              ? "bg-teal-600 text-white hover:bg-teal-700"
+              : "bg-gray-200 text-gray-500 cursor-not-allowed"
+          }`}
+          onClick={() => handlePageClick(currentPage + 1)}
+          disabled={!hasNextPage}
+        >
+          Next
+        </button>
+      </div>
     </div>
   );
 };
@@ -78,10 +164,18 @@ const EventListAdmin = () => {
   const [availableSports, setAvailableSports] = useState([]);
   const [editingEvent, setEditingEvent] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    limit: 10,
+    hasNextPage: false,
+    hasPrevPage: false,
+    total: 0,
+  });
 
   useEffect(() => {
-    fetchEvents(selectedSport);
-  }, [selectedSport]);
+    fetchEvents(selectedSport, pagination.currentPage, pagination.limit);
+  }, [selectedSport, pagination.currentPage, pagination.limit]);
 
   // Apply search filter when events or search query changes
   useEffect(() => {
@@ -98,13 +192,19 @@ const EventListAdmin = () => {
     }
   }, [events, searchQuery]);
 
-  const fetchEvents = async (sport) => {
+  const fetchEvents = async (sport, page, limit) => {
     setLoading(true);
     try {
-      const response = await axios.get(`${apiUrl}/events?sport=${sport}`);
-      // console.log("API Response:", response.data);
+      const response = await axios.get(`${apiUrl}/events`, {
+        params: { sport, page, limit },
+      });
 
-      const { events, availableSports } = response.data;
+      const {
+        events,
+        availableSports,
+        total,
+        pagination: paginationData,
+      } = response.data;
 
       setEvents(events || []);
       setFilteredEvents(events || []);
@@ -112,6 +212,14 @@ const EventListAdmin = () => {
         "all",
         ...(Array.isArray(availableSports) ? availableSports : []),
       ]);
+      setPagination({
+        currentPage: paginationData?.currentPage || 1,
+        totalPages: paginationData?.totalPages || 1,
+        limit: paginationData?.limit || limit,
+        hasNextPage: paginationData?.hasNextPage || false,
+        hasPrevPage: paginationData?.hasPrevPage || false,
+        total: total || 0,
+      });
     } catch (error) {
       console.error("Error fetching events:", error);
     } finally {
@@ -121,6 +229,19 @@ const EventListAdmin = () => {
 
   const handleSearch = (query) => {
     setSearchQuery(query);
+    setPagination((prev) => ({ ...prev, currentPage: 1 }));
+  };
+
+  const handlePageChange = (page) => {
+    setPagination((prev) => ({ ...prev, currentPage: page }));
+  };
+
+  const handleLimitChange = (newLimit) => {
+    setPagination((prev) => ({
+      ...prev,
+      limit: newLimit,
+      currentPage: 1, // Reset to first page when limit changes
+    }));
   };
 
   const handleDelete = async (eventId) => {
@@ -131,19 +252,21 @@ const EventListAdmin = () => {
 
     try {
       const response = await axios.delete(`${apiUrl}/events/${eventId}`);
-      // console.log("Delete Response:", response.data);
-
       if (response.status === 200 || response.data.success) {
         setEvents((prevEvents) =>
           prevEvents.filter((event) => event._id !== eventId)
         );
+        setFilteredEvents((prevEvents) =>
+          prevEvents.filter((event) => event._id !== eventId)
+        );
+        fetchEvents(selectedSport, pagination.currentPage, pagination.limit);
       } else {
         throw new Error("Deletion failed on the server");
       }
     } catch (error) {
       console.error("Error deleting event:", error);
       alert("Failed to delete the event. Please try again.");
-      fetchEvents(selectedSport);
+      fetchEvents(selectedSport, pagination.currentPage, pagination.limit);
     }
   };
 
@@ -154,10 +277,13 @@ const EventListAdmin = () => {
         `${apiUrl}/events/${_id}`,
         eventToSubmit
       );
-      // console.log("Edit Response:", response.data);
-
       if (response.status === 200 || response.data.success) {
         setEvents((prevEvents) =>
+          prevEvents.map((event) =>
+            event._id === _id ? { ...event, ...eventToSubmit } : event
+          )
+        );
+        setFilteredEvents((prevEvents) =>
           prevEvents.map((event) =>
             event._id === _id ? { ...event, ...eventToSubmit } : event
           )
@@ -169,7 +295,7 @@ const EventListAdmin = () => {
     } catch (error) {
       console.error("Error editing event:", error);
       alert("Failed to edit the event. Please try again.");
-      fetchEvents(selectedSport);
+      fetchEvents(selectedSport, pagination.currentPage, pagination.limit);
     }
   };
 
@@ -184,15 +310,17 @@ const EventListAdmin = () => {
   }
 
   return (
-    <div>
-      {/* Search Box */}
+    <div className="container mx-auto p-6 bg-white rounded-lg shadow-lg">
       <EventSearchBox onSearch={handleSearch} />
 
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-6">
         <select
-          className="p-2 border rounded"
+          className="p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-teal-500"
           value={selectedSport}
-          onChange={(e) => setSelectedSport(e.target.value)}
+          onChange={(e) => {
+            setSelectedSport(e.target.value);
+            setPagination((prev) => ({ ...prev, currentPage: 1 }));
+          }}
         >
           {availableSports.map((sport) => (
             <option key={sport} value={sport}>
@@ -202,25 +330,35 @@ const EventListAdmin = () => {
         </select>
 
         <div className="text-sm text-gray-500">
-          Showing {filteredEvents.length} of {events.length} events
+          Showing {filteredEvents.length} of {pagination.total} events
         </div>
       </div>
 
       {filteredEvents.length === 0 ? (
-        <p className="text-gray-500">
-          {events.length === 0
+        <p className="text-gray-500 text-center p-4 bg-gray-100 rounded-lg">
+          {pagination.total === 0
             ? "No events available for this sport."
             : "No events match your search."}
         </p>
       ) : (
-        filteredEvents.map((event) => (
-          <EventCard
-            key={event._id}
-            event={event}
-            handleDelete={handleDelete}
-            setEditingEvent={setEditingEvent}
-          />
-        ))
+        <div className="space-y-4">
+          {filteredEvents.map((event) => (
+            <EventCard
+              key={event._id}
+              event={event}
+              handleDelete={handleDelete}
+              setEditingEvent={setEditingEvent}
+            />
+          ))}
+        </div>
+      )}
+
+      {pagination.totalPages > 1 && (
+        <PaginationControls
+          pagination={pagination}
+          onPageChange={handlePageChange}
+          onLimitChange={handleLimitChange}
+        />
       )}
 
       {editingEvent && (
@@ -234,10 +372,8 @@ const EventListAdmin = () => {
   );
 };
 
-// Edit Modal Component remains the same
-
+// Edit Modal Component
 const EditModal = ({ event, onClose, onSave }) => {
-  // Your existing EditModal implementation
   const [editedEvent, setEditedEvent] = useState({ ...event });
   const [newParticipant, setNewParticipant] = useState({
     name: "",
@@ -251,7 +387,6 @@ const EditModal = ({ event, onClose, onSave }) => {
   const [editingParticipantIndex, setEditingParticipantIndex] = useState(null);
   const [activeTab, setActiveTab] = useState("details");
 
-  // Modified calculation to only count successful participants
   const calculateSuccessfulParticipants = (participants) =>
     participants.reduce(
       (sum, p) =>
@@ -283,7 +418,6 @@ const EditModal = ({ event, onClose, onSave }) => {
       return;
     }
 
-    // Only check for participant limit if the new participant has "success" payment status
     if (newParticipant.paymentStatus === "success") {
       const successfulParticipants = calculateSuccessfulParticipants([
         ...editedEvent.participants,
@@ -298,7 +432,6 @@ const EditModal = ({ event, onClose, onSave }) => {
       }
     }
 
-    // Add the participant regardless of payment status
     const updatedParticipants = [...editedEvent.participants, newParticipant];
     const successfulParticipants =
       calculateSuccessfulParticipants(updatedParticipants);
@@ -356,7 +489,6 @@ const EditModal = ({ event, onClose, onSave }) => {
       i === editingParticipantIndex ? newParticipant : p
     );
 
-    // Only check for participant limit if the edited participant has "success" payment status
     if (newParticipant.paymentStatus === "success") {
       const successfulParticipants =
         calculateSuccessfulParticipants(updatedParticipants);
@@ -396,7 +528,6 @@ const EditModal = ({ event, onClose, onSave }) => {
     onSave(editedEvent);
   };
 
-  // Add payment status selection to the participant form
   const handlePaymentStatusChange = (e) => {
     setNewParticipant((prev) => ({
       ...prev,
@@ -404,7 +535,6 @@ const EditModal = ({ event, onClose, onSave }) => {
     }));
   };
 
-  // Payment status badge styles
   const getStatusBadgeClass = (status) => {
     switch (status) {
       case "success":
@@ -421,7 +551,6 @@ const EditModal = ({ event, onClose, onSave }) => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex justify-center items-center z-50 p-4">
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-        {/* Header */}
         <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gradient-to-r from-teal-500 to-blue-500 text-white">
           <h3 className="text-xl font-bold">Edit Event</h3>
           <button
@@ -445,7 +574,6 @@ const EditModal = ({ event, onClose, onSave }) => {
           </button>
         </div>
 
-        {/* Tabs */}
         <div className="flex border-b border-gray-200 dark:border-gray-700">
           <button
             className={`px-6 py-3 font-medium text-sm ${
@@ -472,7 +600,6 @@ const EditModal = ({ event, onClose, onSave }) => {
           </button>
         </div>
 
-        {/* Content */}
         <div className="overflow-y-auto flex-grow p-6">
           <form onSubmit={handleSubmit}>
             {activeTab === "details" && (
@@ -693,7 +820,6 @@ const EditModal = ({ event, onClose, onSave }) => {
                   </div>
                 </div>
 
-                {/* Participant List */}
                 <div className="mb-6">
                   <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                     Participant List
@@ -752,7 +878,6 @@ const EditModal = ({ event, onClose, onSave }) => {
                   </div>
                 </div>
 
-                {/* Add/Edit Participant Form */}
                 <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
                   <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
                     {editingParticipantIndex !== null
@@ -903,7 +1028,6 @@ const EditModal = ({ event, onClose, onSave }) => {
           </form>
         </div>
 
-        {/* Footer */}
         <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
           <button
             type="button"

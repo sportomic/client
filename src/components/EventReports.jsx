@@ -58,64 +58,69 @@ const EventsReports = () => {
           Total Venues Checked: {report.totalVenuesChecked}
         </p>
 
-        <div>
-          <h3 className="text-xl font-semibold mb-4 text-gray-800">
-            Venues with Events
-          </h3>
-          <div className="overflow-x-auto">
-            <table className="min-w-full bg-white border border-gray-200">
-              <thead>
-                <tr className="bg-blue-50">
-                  <th className="py-3 px-4 text-left text-sm font-semibold text-gray-700 border-b">
-                    Venue Name
-                  </th>
-                  <th className="py-3 px-4 text-left text-sm font-semibold text-gray-700 border-b">
-                    Total Events
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.venuesWithEvents.map((venue) => (
-                  <tr
-                    key={venue.venueName}
-                    className="hover:bg-gray-50 transition-colors"
-                  >
-                    <td className="py-3 px-4 text-sm text-gray-600 border-b">
-                      {venue.venueName}
-                    </td>
-                    <td className="py-3 px-4 text-sm text-gray-600 border-b">
-                      {venue.totalEvents}
-                    </td>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h3 className="text-xl font-semibold mb-4 text-gray-800">
+              Venues with Events
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white border border-gray-200">
+                <thead>
+                  <tr className="bg-blue-50">
+                    <th className="py-3 px-4 text-left text-sm font-semibold text-gray-700 border-b">
+                      Venue Name
+                    </th>
+                    <th className="py-3 px-4 text-left text-sm font-semibold text-gray-700 border-b">
+                      Total Events
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {report.venuesWithEvents.map((venue) => (
+                    <tr
+                      key={venue.venueName}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
+                      <td className="py-3 px-4 text-sm text-gray-600 border-b">
+                        {venue.venueName}
+                      </td>
+                      <td className="py-3 px-4 text-sm text-gray-600 border-b">
+                        {venue.totalEvents}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
 
-        <div>
-          <h3 className="text-xl font-semibold mb-4 text-gray-800">
-            Venues with No Events
-          </h3>
-          <div className="overflow-x-auto">
-            <table className="min-w-full bg-white border border-gray-200">
-              <thead>
-                <tr className="bg-red-50">
-                  <th className="py-3 px-4 text-left text-sm font-semibold text-gray-700 border-b">
-                    Venue Name
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.venuesWithNoEvents.map((venue) => (
-                  <tr key={venue} className="hover:bg-red-50 transition-colors">
-                    <td className="py-3 px-4 text-sm text-red-600 border-b">
-                      {venue}
-                    </td>
+          <div>
+            <h3 className="text-xl font-semibold mb-4 text-gray-800">
+              Venues with No Events
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white border border-gray-200">
+                <thead>
+                  <tr className="bg-red-50">
+                    <th className="py-3 px-4 text-left text-sm font-semibold text-gray-700 border-b">
+                      Venue Name
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {report.venuesWithNoEvents.map((venue) => (
+                    <tr
+                      key={venue}
+                      className="hover:bg-red-50 transition-colors"
+                    >
+                      <td className="py-3 px-4 text-sm text-red-600 border-b">
+                        {venue}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
